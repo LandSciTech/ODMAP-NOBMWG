@@ -10,12 +10,38 @@ library(rangeModelMetadata)
 odmap_dict = read.csv("www/odmap_dict.csv", header = T, stringsAsFactors = F)
 rmm_dict = rmmDataDictionary()
 
+# Copied from ccviR to add info icon
+# if(guide) {
+#   chkbxIn <- fluidRow(
+#     column(9, chkbxIn),
+#     column(1, div(actionButton(NS(id, paste0("help_", ui_id)), label = "", icon = icon("info")),
+#                   style = "position: absolute;top: 15px;"))
+#   )
+# }
+# 
+# show_guidelines <- function(input) {
+#   # Show guidelines with additional info for each section
+#   help_ins <- stringr::str_subset(names(input), "help")
+#   
+#   purrr::map(help_ins,
+#              ~observeEvent(input[[.x]], {
+#                guide_popup(.x)
+#              }, ignoreInit = TRUE))
+# }
+# 
+# observe(show_guidelines(input)) # Create Guideline buttons
+
 server <- function(input, output, session) {
   # ------------------------------------------------------------------------------------------#
   #                           Rendering functions for UI elements                             # 
   # ------------------------------------------------------------------------------------------#
   render_text = function(element_id, element_placeholder){
     textAreaInput(inputId = element_id, label = element_placeholder, height = "45px", resize = "vertical")
+  }
+  
+  render_text_details = function(element_id, element_placeholder, details){
+    textAreaInput(inputId = element_id, label = element_placeholder, height = "45px", resize = "vertical", 
+                  placeholder = details)
   }
   
   render_authors = function(){
@@ -27,8 +53,28 @@ server <- function(input, output, session) {
   }
   
   render_objective = function(element_id, element_placeholder){
-    selectizeInput(inputId = element_id, label = NULL, multiple = F, options = list(create = T, placeholder = "Choose from list"),
+    selectizeInput(inputId = element_id, label = NULL, multiple = F, options = list(create = F, placeholder = "Choose from list"),
                    choices = list("", "Inference and explanation", "Mapping and interpolation", "Forecast and transfer"))
+  }
+  
+  select_applicability = function(sub_element_id, application){
+    selectizeInput(inputId = sub_element_id, label = application, multiple = FALSE,
+                   options = list(create = T, placeholder = "Choose from list"),
+                   choices = list("", "Inappropriate", "Low", "Medium", "High"))
+  }
+  
+  render_applicability = function(element_id, details){
+    # fancier option would be a table with dropdowns
+    # https://stackoverflow.com/questions/57215607/render-dropdown-for-single-column-in-dt-shiny
+    applics <- c(infer = "Inference and explanation", map = "Mapping and interpolation", 
+                 forecast = "Forecast and transfer")
+    inps <- purrr::imap(applics, \(x,idx) select_applicability(paste0(element_id, "_", idx), x))
+    
+    div(
+    markdown(details),
+    tagList(inps)
+
+    )
   }
   
   render_suggestion = function(element_id, element_placeholder, suggestions){
@@ -89,8 +135,10 @@ server <- function(input, output, session) {
         # Second element: Input field(s) 
         element_UI_list[[2]] = switch(section_dict$element_type[i],
                                       text = render_text(section_dict$element_id[i], section_dict$element_placeholder[i]),
+                                      text_details = render_text_details(section_dict$element_id[i], section_dict$element_placeholder[i], section_dict$details[i]),
                                       author = render_authors(),
                                       objective = render_objective(section_dict$element_id[i], section_dict$element_placeholder[i]),
+                                      applications = render_applicability(section_dict$element_id[i], section_dict$details[i]),
                                       suggestion = render_suggestion(section_dict$element_id[i], section_dict$element_placeholder[i], section_dict$suggestions[i]),
                                       extent = render_extent(section_dict$element_id[i]),
                                       model_algorithm = render_model_algorithm(section_dict$element_id[i], section_dict$element_placeholder[i]),
