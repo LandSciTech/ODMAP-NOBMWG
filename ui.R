@@ -16,7 +16,7 @@ ui <-  tagList(
     title = div(
       div(
         id = "github_logo", 
-        a(img(src="github_logo_40px.png"), href = "https://github.com/UP-macroecology/ODMAP", target="_blank")
+        a(img(src="github_logo_40px.png"), href = "https://github.com/LandSciTech/ODMAP-NOBMWG", target="_blank")
       ),
       "ODMAP-NOBMWG v0.0.9000"
     ),
@@ -94,33 +94,45 @@ ui <-  tagList(
       ),
       
       mainPanel(
-        tabsetPanel(
-          id = "tabset",
-          tabPanel("1. Overview", value = "Overview",  fluidPage(
-            em(p("Give a brief overview of all important parts of your study.", style = "padding-top: 10px; font-weight: 300;")),
-            uiOutput("Overview_UI")
-          )),
-          
-          tabPanel("2. Data", value = "Data", fluidPage(
-            em(p("Describe your your data in detail.", style = "padding-top: 10px; font-weight: 300")),
-            uiOutput("Data_UI")
-          )),
-          
-          tabPanel("3. Model", value = "Model", fluidPage(
-            em(p("Describe your modeling approach in detail.", style = "padding-top: 10px; font-weight: 300")),
-            uiOutput("Model_UI")
-          )),
-          
-          tabPanel("4. Assessment", value = "Assessment", fluidPage(
-            em(p("Describe how you assessed your model results.", style = "padding-top: 10px; font-weight: 300")),
-            uiOutput("Assessment_UI")
-          )),
-          
-          tabPanel("5. Prediction", value = "Prediction", fluidPage(
-            em(p("Describe your model predictions in detail.", style = "padding-top: 10px; font-weight: 300")),
-            uiOutput("Prediction_UI")
-          )) 
-        ))
+        sidebarLayout(
+          sidebarPanel(
+            style = "position:fixed",
+            h3("Glossary"),
+            DT::dataTableOutput("glossary_table", height = 800)
+          ), 
+          mainPanel(
+            tabsetPanel(
+              id = "tabset",
+              tabPanel("1. Overview", value = "Overview",  fluidPage(
+                em(p("Give a brief overview of all important parts of your study.", style = "padding-top: 10px; font-weight: 300;")),
+                uiOutput("Overview_UI")
+              )),
+              
+              tabPanel("2. Data", value = "Data", fluidPage(
+                em(p("Describe your your data in detail.", style = "padding-top: 10px; font-weight: 300")),
+                uiOutput("Data_UI")
+              )),
+              
+              tabPanel("3. Model", value = "Model", fluidPage(
+                em(p("Describe your modeling approach in detail.", style = "padding-top: 10px; font-weight: 300")),
+                uiOutput("Model_UI")
+              )),
+              
+              tabPanel("4. Assessment", value = "Assessment", fluidPage(
+                em(p("Describe how you assessed your model results.", style = "padding-top: 10px; font-weight: 300")),
+                uiOutput("Assessment_UI")
+              )),
+              
+              tabPanel("5. Prediction", value = "Prediction", fluidPage(
+                em(p("Describe your model predictions in detail.", style = "padding-top: 10px; font-weight: 300")),
+                uiOutput("Prediction_UI")
+              )) 
+            )
+          ),
+          position = "right"
+        ),
+        width = 10
+        )
     )),
     
     # PREVIEW PROTOCOL

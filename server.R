@@ -8,28 +8,8 @@ library(tidyverse)
 library(rangeModelMetadata)
 
 odmap_dict = read.csv("www/odmap_dict.csv", header = T, stringsAsFactors = F)
+glossary = read.csv("www/glossary.csv", header = T, stringsAsFactors = F)
 rmm_dict = rmmDataDictionary()
-
-# Copied from ccviR to add info icon
-# if(guide) {
-#   chkbxIn <- fluidRow(
-#     column(9, chkbxIn),
-#     column(1, div(actionButton(NS(id, paste0("help_", ui_id)), label = "", icon = icon("info")),
-#                   style = "position: absolute;top: 15px;"))
-#   )
-# }
-# 
-# show_guidelines <- function(input) {
-#   # Show guidelines with additional info for each section
-#   help_ins <- stringr::str_subset(names(input), "help")
-#   
-#   purrr::map(help_ins,
-#              ~observeEvent(input[[.x]], {
-#                guide_popup(.x)
-#              }, ignoreInit = TRUE))
-# }
-# 
-# observe(show_guidelines(input)) # Create Guideline buttons
 
 server <- function(input, output, session) {
   # ------------------------------------------------------------------------------------------#
@@ -53,7 +33,7 @@ server <- function(input, output, session) {
   }
   
   render_objective = function(element_id, element_placeholder){
-    selectizeInput(inputId = element_id, label = NULL, multiple = F, options = list(create = F, placeholder = "Choose from list"),
+    selectizeInput(inputId = element_id, label = element_placeholder, multiple = F, options = list(create = F, placeholder = "Choose from list"),
                    choices = list("", "Inference and explanation", "Mapping and interpolation", "Forecast and transfer"))
   }
   
@@ -84,22 +64,26 @@ server <- function(input, output, session) {
   
   render_extent = function(element_id){
     if(element_id == "o_scale_1"){
-      splitLayout(
-        cellWidths = c("170px",  "150px", "150px", "150px", "150px"),
-        p("Spatial extent (long/lat)", style = "padding: 9px 12px"),
-        textAreaInput(inputId = paste0(element_id, "_xmin"), label = "xmin", height = "45px", resize = "none"),
-        textAreaInput(inputId = paste0(element_id, "_xmax"), label = "xmax", height = "45px", resize = "none"),
-        textAreaInput(inputId = paste0(element_id, "_ymin"), label = "ymin", height = "45px", resize = "none"),
-        textAreaInput(inputId = paste0(element_id, "_ymax"), label = "ymax", height = "45px", resize = "none")
+      tagList(
+        p("Spatial extent (long/lat)"),
+        splitLayout(
+          cellWidths = c( "150px", "150px", "150px", "150px"),
+          textAreaInput(inputId = paste0(element_id, "_xmin"), label = "xmin", height = "45px", resize = "none"),
+          textAreaInput(inputId = paste0(element_id, "_xmax"), label = "xmax", height = "45px", resize = "none"),
+          textAreaInput(inputId = paste0(element_id, "_ymin"), label = "ymin", height = "45px", resize = "none"),
+          textAreaInput(inputId = paste0(element_id, "_ymax"), label = "ymax", height = "45px", resize = "none")
+        )
       )
     } else {
-      splitLayout(
-        cellWidths = c("120px",  "150px", "150px", "150px", "150px"),
-        p("Spatial extent", style = "padding: 9px 12px"),
-        textAreaInput(inputId = paste0(element_id, "_xmin"), label = "xmin", height = "45px", resize = "none"),
-        textAreaInput(inputId = paste0(element_id, "_xmax"), label = "xmax", height = "45px", resize = "none"),
-        textAreaInput(inputId = paste0(element_id, "_ymin"), label = "ymin", height = "45px", resize = "none"),
-        textAreaInput(inputId = paste0(element_id, "_ymax"), label = "ymax", height = "45px", resize = "none")
+      tagList(
+        p("Spatial extent"),
+        splitLayout(
+          cellWidths = c("150px", "150px", "150px", "150px"),
+          textAreaInput(inputId = paste0(element_id, "_xmin"), label = "xmin", height = "45px", resize = "none"),
+          textAreaInput(inputId = paste0(element_id, "_xmax"), label = "xmax", height = "45px", resize = "none"),
+          textAreaInput(inputId = paste0(element_id, "_ymin"), label = "ymin", height = "45px", resize = "none"),
+          textAreaInput(inputId = paste0(element_id, "_ymax"), label = "ymax", height = "45px", resize = "none")
+        )
       )
     }
   }
@@ -115,6 +99,25 @@ server <- function(input, output, session) {
       actionButton("add_setting", label = NULL, icon = icon("plus")),
       br(),br()
     )
+  }
+  
+  # wraps the output of the other elements rendering functions to allow the 
+  # addition of an info box
+  render_element = function(element_id, element_ui, info = TRUE){
+    if(info) {
+      element <- fluidRow(
+        column(9, element_ui),
+        column(1, div(actionButton(paste0("help_", element_id), label = "", icon = icon("info")),
+                      style = "position: absolute;top: 15px;"))
+      )
+    } else {
+      element <- fluidRow(
+        column(9, element_ui),
+        column(1)
+      )
+    }
+    return(div(style = "padding: 0px 0px;margin-top:-4em", 
+               element))
   }
   
   render_section = function(section, odmap_dict){
@@ -143,6 +146,8 @@ server <- function(input, output, session) {
                                       extent = render_extent(section_dict$element_id[i]),
                                       model_algorithm = render_model_algorithm(section_dict$element_id[i], section_dict$element_placeholder[i]),
                                       model_setting = render_model_settings())
+        
+        element_UI_list[[2]] = render_element(section_dict$element_id[i], element_UI_list[[2]])
         
         # Third element: Next/previous button
         if(i == nrow(section_dict)){
@@ -574,6 +579,48 @@ server <- function(input, output, session) {
   # ------------------------------------------------------------------------------------------#
   #                                      Event handlers                                       # 
   # ------------------------------------------------------------------------------------------#
+  
+  show_glossary <- function(input) {
+    # Show guidelines with additional info for each section
+    help_ins <- stringr::str_subset(names(input), "help")
+
+    purrr::map(help_ins,
+               ~observeEvent(input[[.x]], {
+                 glossary_filter(.x)
+               }, ignoreInit = TRUE))
+  }
+  
+  glossary_filter <- function(id){
+    element_id <- str_remove(id, "help_")
+    DT::updateSearch(glossary_proxy, keywords = list(global = element_id, columns = NULL))
+  }
+
+  observe(show_glossary(input)) # Create Guideline buttons
+  
+  output$glossary_table <- DT::renderDataTable({
+    DT::datatable(
+      glossary, rownames = FALSE, escape = FALSE, 
+      fillContainer = TRUE,
+      # height = 200,
+      options = list(
+        # autoWidth = TRUE,
+        # pageLength = 50,
+        # lengthMenu = c(50, 100, 1000), 
+        # dom = 'Blfrtip',             
+        # buttons = c('copy', 'excel'),
+        columnDefs = list(
+          list(
+            targets = 2,
+            searchable = TRUE,
+            visible = FALSE
+          )
+        )
+      )
+    )
+  })
+  
+  glossary_proxy <- DT::dataTableProxy("glossary_table")
+  
   # Study objective
   observeEvent(input$o_objective_1, {
     # Dynamically show/hide corresponding input fields
