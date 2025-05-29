@@ -11,7 +11,9 @@ element is the label used by the knit functions before the content from the inpu
 
 I have added a details column which I am using to add more detailed instructions
 or explanations to the shiny inputs. In some cases this is placeholder text 
-inside the text box, in others it is text that shows before the inputs.
+inside the text box, in others it is text that shows before the inputs. I you 
+want to add details to a text output you can do that by changing element_type
+from "text" to "text_details".
 
 When a new type of input is needed you must:
 
