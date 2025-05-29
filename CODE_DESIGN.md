@@ -29,4 +29,7 @@ When a new type of input is needed you must:
      
      
 **Note** So far I have not added knit or export functions for any of the new inputs I have created. 
+
+To run the local version of the app opwn the ui.R file and click Run App in 
+RStudio. Or run `shiny::runApp()` in the console.
   
