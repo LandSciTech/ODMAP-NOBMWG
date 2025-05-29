@@ -12,23 +12,26 @@ ui <-  tagList(
 
   navbarPage(
     id = "navbar",
-    windowTitle = "ODMAP v1.0",
+    windowTitle = "ODMAP-NOBMWG v0.0.9000",
     title = div(
       div(
         id = "github_logo", 
         a(img(src="github_logo_40px.png"), href = "https://github.com/UP-macroecology/ODMAP", target="_blank")
       ),
-      "ODMAP v1.0"
+      "ODMAP-NOBMWG v0.0.9000"
     ),
     position = "fixed-top",
     theme = shinytheme("cosmo"),
-    selected = "about",
+    selected = "create",
   
     # HOME TAB
     tabPanel("What is ODMAP?", value = "about", fluidPage(
       fluidRow(
         column(width = 2),
         column(width = 8, 
+               h1(strong("This is a beta version of an updated ODMAP for the NOBMWG")),
+               p("Please note that kniting, saving, importing, and exporting functions are not currently supported.",
+                 "Please use the 'Create a protocol' tab only."),
                p("What is ODMAP?", style = "padding-top: 10px; font-size: 30px; font-weight:bold;"),
                p("Species distribution models (SDMs) constitute the most common class of biodiversity models. The advent of ready-to-use software packages and
              increasing availability of digital geo-information have considerably assisted the application of SDMs in recent years  enabling their use in
