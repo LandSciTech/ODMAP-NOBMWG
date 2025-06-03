@@ -20,8 +20,12 @@ server <- function(input, output, session) {
   }
   
   render_text_details = function(element_id, element_placeholder, details){
-    textAreaInput(inputId = element_id, label = element_placeholder, height = "45px", resize = "vertical", 
-                  placeholder = details)
+    tagList(
+      element_placeholder, br(),
+      em(HTML(details)),
+      textAreaInput(inputId = element_id, label = NULL, height = "45px", resize = "vertical", 
+                    placeholder = NULL)
+    )
   }
   
   render_authors = function(){
