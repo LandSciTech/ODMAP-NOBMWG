@@ -25,8 +25,7 @@ running_number,section,section_id,subsection,subsection_id,element,element_id,el
 2,Overview,o,Biodiversity data,o_bio,Response data type,o_bio_2,Response/data type: choose from list or insert new values,suggestion,,"presence-only, presence/absence, point occurrence, counts, richness, spatial data integration, spatio-temporal data integration",0,1,1,1,data$occurrence,dataType,base,1
 1,Overview,o,Predictors,o_predictors,Predictor types,o_predictors_1,Type of predictor variables: choose from list or insert new values,suggestion,,"climatic, topographic, edaphic, habitat",0,1,1,1,,,,
 1,Overview,o,Hypotheses,o_concept,Hypotheses,o_concept_1,Hypotheses about species-environment relationships,text,,,0,1,1,1,studyObjective,hypotheses,,1
-1,Overview,o,Assumptions,o_assumptions,Model assumptions,o_assumptions_1,Critical model assumptions,suggestion,,"species-covariates correlations, equilibrium and habitat saturation, dispersal and landscapes, biotic interactions, adaptation and evolution",0,1,1,1,,,,
-2,Overview,o,Assumptions,o_assumptions,Model assumptions,o_assumptions_2,Critical model assumptions,text,Explain how the selected assumptions apply to your model,,0,1,1,1,,,,
+1,Overview,o,Assumptions,o_assumptions,Model assumptions,o_assumptions_1,Critical model assumptions,model_assumptions,,"species-covariates correlations, equilibrium and habitat saturation, dispersal and landscapes, biotic interactions, adaptation and evolution",0,1,1,1,,,,
 1,Overview,o,Model,o_model,Type of model,o_model_1,Type of model,suggestion,,"SDMs-Correlative, SDMs-Mechanistic, Community-level models (CLMs), Joint SDMs, Multi-state SDMs, Dynamic SDMs, Occupancy detection models.",0,1,1,1,,,,
 1,Overview,o,Algorithms,o_algorithms,Modelling techniques,o_algorithms_1,Modelling techniques used,model_algorithm,,,0,1,1,1,,,,
 2,Overview,o,Algorithms,o_algorithms,Model complexity,o_algorithms_2,Justification of model complexity,text,,,0,1,1,1,,,,

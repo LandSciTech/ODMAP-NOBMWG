@@ -101,6 +101,16 @@ server <- function(input, output, session) {
     )
   }
   
+  render_model_assumptions = function(suggestions){
+   
+    div(
+      em(p("Edit fields by double clicking in the table. Add new assumptions with the plus sign.", style = "font-weight: 300;")),
+      DT::dataTableOutput("assumptions_table"),
+      actionButton("add_assumption", label = NULL, icon = icon("plus")),
+      br(),br()
+    )
+  }
+  
   # wraps the output of the other elements rendering functions to allow the 
   # addition of an info box
   render_element = function(element_id, element_ui, info = TRUE){
@@ -145,7 +155,8 @@ server <- function(input, output, session) {
                                       suggestion = render_suggestion(section_dict$element_id[i], section_dict$element_placeholder[i], section_dict$suggestions[i]),
                                       extent = render_extent(section_dict$element_id[i]),
                                       model_algorithm = render_model_algorithm(section_dict$element_id[i], section_dict$element_placeholder[i]),
-                                      model_setting = render_model_settings())
+                                      model_setting = render_model_settings(),
+                                      model_assumptions = render_model_assumptions())
         
         element_UI_list[[2]] = render_element(section_dict$element_id[i], element_UI_list[[2]])
         
@@ -735,6 +746,32 @@ server <- function(input, output, session) {
       # TODO jump to Input field
     }
   })
+  # -------Assumptions------------------------
+  assumptions = reactiveValues(df = data.frame(
+    assumption = odmap_dict %>% filter(element_id == "o_assumptions_1") %>% 
+      separate_longer_delim(suggestions, delim = ", ") %>% pull(suggestions),
+    description = NA_character_
+  )) 
+  
+  output$assumptions_table = DT::renderDataTable({
+    assumptions_dt = datatable(assumptions$df, escape = F, rownames = F, editable = T, colnames = c("Assumption", "Description"), 
+                             options = list(dom = "t", autoWidth = F, 
+                                            columnDefs = list(list(width = '20%', targets = c(0)), 
+                                                              list(width = '80%', targets = c(1)),
+                                                              list(orderable = F, targets = c(0:1)))))
+    return(assumptions_dt)
+  })
+  
+  observeEvent(input$add_assumption, {
+    assumptions$df <- rbind(assumptions$df, 
+                            data.frame(assumption = NA_character_,  description = NA_character_))
+  })
+  
+  observeEvent(input$assumptions_table_cell_edit, {
+    assumptions$df[input$assumptions_table_cell_edit$row, input$assumptions_table_cell_edit$col + 1] = input$assumptions_table_cell_edit$value
+    output$assumptions_df = renderDataTable(assumptions$df)
+  })
+  
   
   # -------------------------------------------
   # Authors
