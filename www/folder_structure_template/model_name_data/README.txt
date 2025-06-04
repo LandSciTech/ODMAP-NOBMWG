@@ -12,6 +12,8 @@ Sub-folders:
 	    - A shapefile, gpkg, or csv containing survey location information.
 	    - A csv with the scientific name, common name and 4 letter species code. 
 	      Fill in the provided template.
+	- study_area_data: A shapefile or gpkg containing a polygon of the study area
+	  boundary.
 	- predictor_data: A csv file of covariate values at each survey location with 
 	  covariate names as headers and one row per survey location.
 	- transfer_data: Covariate grid for making predictions. One raster file per 

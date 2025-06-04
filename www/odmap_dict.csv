@@ -10,7 +10,7 @@ running_number,section,section_id,subsection,subsection_id,element,element_id,el
 **Medium**: Use of this model for this utility and/or applicability is SOMEWHAT appropriate,  
 **Low**: Use of this model for this utility and/or applicability is RARELY appropriate,  
 **Inappropriate**: Use of this model for this utility and/or applicability is NOT appropriate  ",,0,1,1,1,,,,
-2,Overview,o,Model applications,o_applications,Application comments,o_applications_2,Application comments,text_details,Please explain in more detail what types of applications this model could be appropriate for and what users should consider in deciding whether it is appropriate for their use case. ,,0,1,1,1,,,,
+2,Overview,o,Model applications,o_applications,Model applications details,o_applications_2,Application details,text_details,"Work in progress, please fill in <a href=""https://docs.google.com/spreadsheets/d/1F4KWF4D7ybgK9NFNKoezpeTCrzvYLtUPqGELh2AzaE0/edit?usp=sharing"" target=""_blank"">this table</a> ",,0,1,1,1,,,,
 1,Overview,o,Focal Taxon,o_taxon,Focal Taxon,o_taxon_1,Focal taxon,text,,,0,1,1,1,,,,
 2,Overview,o,Focal Taxon,o_taxon,Focal taxon rationale,o_taxon_2,"Explain why single or multiple species were selected? ( e.g., focal species from a specific taxonomic group, specific habitat (e.g., boreal forest), conservation significance, etc.)",text,,,0,1,1,1,,,,
 1,Overview,o,Location,o_location,Location,o_location_1,"Location of the study area: Jurisdictions (e.g., Canada or Provinces/Territories), ecoregions, watersheds, species geographic range, minimum convex polygon, etc.",text,,,0,1,1,1,,,,
@@ -39,7 +39,7 @@ running_number,section,section_id,subsection,subsection_id,element,element_id,el
 3,Data,d,Biodiversity data,d_bio,Ecological level,d_bio_3,Ecological level: choose from list or insert new values,suggestion,,"individuals, communities, populations, operational taxonomic units, species,",0,1,1,1,,,,
 4,Data,d,Biodiversity data,d_bio,Data sources,d_bio_4,"Details on species data source: e.g., URL/DOI, accession date, database version",text,,,0,1,1,1,data$occurrence,sources,base,1
 5,Data,d,Biodiversity data,d_bio,Sampling design,d_bio_5,"Sampling design: spatial design: e.g. random, uniform, stratified), temporal design, nestedness",text,,,0,1,1,1,,,,
-6,Data,d,Biodiversity data,d_bio,Sample size,d_bio_6,"Sample size per taxon (incl. prevalence): e.g., number of observations/counts, prevalence",text,,,0,1,1,1,data$occurrence,presenceSampleSize,,1
+6,Data,d,Biodiversity data,d_bio,Sample size,d_bio_6,"Sample size per taxon (incl. prevalence): e.g., number of observations/counts, prevalence",text_details,F,,0,1,1,1,data$occurrence,presenceSampleSize,,1
 7,Data,d,Biodiversity data,d_bio,Clipping,d_bio_7,"Country/region mask, if applicable",text,,,1,1,1,1,,,,
 8,Data,d,Biodiversity data,d_bio,Scaling,d_bio_8,"Details on scaling, if applicable: e.g., rasterisation of polygon maps, spatial and temporal thinning, measures to address spatial uncertainties",text,,,1,1,1,1,dataPrep$geographic$spatialThin,"rule,notes",dataPrep,0
 9,Data,d,Biodiversity data,d_bio,Cleaning,d_bio_9,"Details on data cleaning/filtering steps, if applicable: e.g., taxonomically, outlier presence/treatment",text,,,1,1,1,1,"dataPrep$biological$duplicateRemoval,dataPrep$biological$questionablePointRemoval,dataPrep$biological$cultivatedRemoval,dataPrep$biological$nonNativeRemoval,dataPrep$geographic$geographicalOutlierRemoval, dataPrep$geographic$centroidRemoval,dataPrep$geographic$pointInPolygon,dataPrep$geographic$altitudeRemoval","rule,notes",dataPrep,0
