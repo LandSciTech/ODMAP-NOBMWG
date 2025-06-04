@@ -4,6 +4,7 @@ library(shinyWidgets)
 library(shinythemes)
 library(shinydashboard)
 library(DT)
+# remotes::install_github("alistaire47/read.so")
 
 
 ui <-  tagList(
@@ -97,8 +98,12 @@ ui <-  tagList(
         sidebarLayout(
           sidebarPanel(
             style = "position:fixed",
-            h3("Glossary"),
-            DT::dataTableOutput("glossary_table", height = 800)
+            div(
+              style = "height: 80vh; overflow-y: auto;",
+              h3("Glossary"),
+              DT::dataTableOutput("glossary_table", height = "900"),
+              width = 5
+            )
           ), 
           mainPanel(
             tabsetPanel(
@@ -127,9 +132,10 @@ ui <-  tagList(
                 em(p("Describe your model predictions in detail.", style = "padding-top: 10px; font-weight: 300")),
                 uiOutput("Prediction_UI")
               )) 
-            )
+            ),
+            width = 7
           ),
-          position = "right"
+          position = "right",
         ),
         width = 10
         )

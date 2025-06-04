@@ -119,7 +119,7 @@ server <- function(input, output, session) {
   render_element = function(element_id, element_ui, info = TRUE){
     if(info) {
       element <- fluidRow(
-        column(9, element_ui),
+        column(11, element_ui),
         column(1, div(actionButton(paste0("help_", element_id), label = "", icon = icon("info")),
                       style = "position: absolute;top: 15px;"))
       )
@@ -634,11 +634,6 @@ server <- function(input, output, session) {
       fillContainer = TRUE,
       # height = 200,
       options = list(
-        # autoWidth = TRUE,
-        # pageLength = 50,
-        # lengthMenu = c(50, 100, 1000), 
-        # dom = 'Blfrtip',             
-        # buttons = c('copy', 'excel'),
         columnDefs = list(
           list(
             targets = 2,
