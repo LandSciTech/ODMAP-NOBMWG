@@ -41,25 +41,25 @@ server <- function(input, output, session) {
                    choices = list("", "Inference and explanation", "Mapping and interpolation", "Forecast and transfer"))
   }
   
-  select_applicability = function(sub_element_id, application){
-    selectizeInput(inputId = sub_element_id, label = application, multiple = FALSE,
-                   options = list(create = T, placeholder = "Choose from list"),
-                   choices = list("", "Inappropriate", "Low", "Medium", "High"))
-  }
-  
-  render_applicability = function(element_id, details){
-    # fancier option would be a table with dropdowns
-    # https://stackoverflow.com/questions/57215607/render-dropdown-for-single-column-in-dt-shiny
-    applics <- c(infer = "Inference and explanation", map = "Mapping and interpolation", 
-                 forecast = "Forecast and transfer")
-    inps <- purrr::imap(applics, \(x,idx) select_applicability(paste0(element_id, "_", idx), x))
-    
-    div(
-    markdown(details),
-    tagList(inps)
-
-    )
-  }
+  # select_applicability = function(sub_element_id, application){
+  #   selectizeInput(inputId = sub_element_id, label = application, multiple = FALSE,
+  #                  options = list(create = T, placeholder = "Choose from list"),
+  #                  choices = list("", "Inappropriate", "Low", "Medium", "High"))
+  # }
+  # 
+  # render_applicability = function(element_id, details){
+  #   # fancier option would be a table with dropdowns
+  #   # https://stackoverflow.com/questions/57215607/render-dropdown-for-single-column-in-dt-shiny
+  #   applics <- c(infer = "Inference and explanation", map = "Mapping and interpolation", 
+  #                forecast = "Forecast and transfer")
+  #   inps <- purrr::imap(applics, \(x,idx) select_applicability(paste0(element_id, "_", idx), x))
+  #   
+  #   div(
+  #   markdown(details),
+  #   tagList(inps)
+  # 
+  #   )
+  # }
   
   render_suggestion = function(element_id, element_placeholder, suggestions){
     suggestions = sort(trimws(unlist(strsplit(suggestions, ","))))
@@ -105,8 +105,7 @@ server <- function(input, output, session) {
     )
   }
   
-  render_model_assumptions = function(suggestions){
-   
+  render_model_assumptions = function(){
     div(
       em(p("Edit fields by double clicking in the table. Add new assumptions with the plus sign.", style = "font-weight: 300;")),
       DT::dataTableOutput("assumptions_table"),
@@ -377,6 +376,10 @@ server <- function(input, output, session) {
     }
   }
   
+  import_model_assumptions = function(element_id, values){
+    assumptions$df <- read.so::read.md(values)
+  }
+  
   # ------------------------------------------------------------------------------------------#
   #                                     Export functions                                      # 
   # ------------------------------------------------------------------------------------------#
@@ -422,6 +425,11 @@ server <- function(input, output, session) {
     }
   }
   
+  export_model_assumptions = function(element_id){
+    assump_tab = assumptions$df %>% filter(assumption != "")
+    assump_tab %>% knitr::kable(format = "pipe") %>% paste0(collapse = "\n")
+    
+  }
   # ------------------------------------------------------------------------------------------#
   #                                   UI Elements                                             # 
   # ------------------------------------------------------------------------------------------#
@@ -492,12 +500,14 @@ server <- function(input, output, session) {
         for(i in 1:nrow(odmap_download)){
           odmap_download$Value[i] = switch(odmap_download$element_type[i],
                                            text = export_standard(odmap_download$element_id[i]),
+                                           text_details = export_standard(odmap_download$element_id[i]),
                                            author = export_authors(odmap_download$element_id[i]),
                                            objective = export_standard(odmap_download$element_id[i]),
                                            suggestion = export_suggestion(odmap_download$element_id[i]),
                                            extent = export_extent(odmap_download$element_id[i]),
                                            model_algorithm = export_suggestion(odmap_download$element_id[i]),
                                            model_setting = export_model_setting(odmap_download$element_id[i]),
+                                           model_assumptions = export_model_assumptions(odmap_download$element_id[i]),
                                            "") 
         }
         
@@ -846,12 +856,14 @@ server <- function(input, output, session) {
     for(i in 1:nrow(protocol_upload)){
       switch(protocol_upload$element_type[i],
              text = import_odmap_to_text(element_id = protocol_upload$element_id[i], values = protocol_upload$Value[i]),
+             text_details = import_odmap_to_text(element_id = protocol_upload$element_id[i], values = protocol_upload$Value[i]),
              author = import_odmap_to_authors(element_id = protocol_upload$element_id[i], values = protocol_upload$Value[i]),
              objective = import_odmap_to_model_objective(element_id = protocol_upload$element_id[i], values = protocol_upload$Value[i]),
              suggestion = import_suggestion(element_id = protocol_upload$element_id[i], values = protocol_upload$Value[i]),
              extent = import_odmap_to_extent(element_id = protocol_upload$element_id[i], values = protocol_upload$Value[i]),
              model_algorithm = import_odmap_to_model_algorithm(element_id = protocol_upload$element_id[i], values = protocol_upload$Value[i]),
-             model_setting = import_model_settings(element_id = protocol_upload$element_id[i], values = protocol_upload$Value[i]))
+             model_setting = import_model_settings(element_id = protocol_upload$element_id[i], values = protocol_upload$Value[i]),
+             model_assumptions = import_model_assumptions(element_id = protocol_upload$element_id[i], values = protocol_upload$Value[i]))
     }
     
     # Switch to "Create a protocol" 
