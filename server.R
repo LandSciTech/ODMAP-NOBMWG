@@ -260,6 +260,12 @@ server <- function(input, output, session) {
     }
   }
   
+  knit_model_assumptions = function(element_id){
+    element_name = odmap_dict$element[which(odmap_dict$element_id == element_id)]
+    
+    knitr::kable(assumptions$df, caption = element_name)
+  }
+  
   knit_missing = function(element_id){
     if(!(element_id %in% elem_hide[[input$o_objective_1]] | element_id %in% elem_optional)){
       placeholder = odmap_dict$element[which(odmap_dict$element_id == element_id)]
