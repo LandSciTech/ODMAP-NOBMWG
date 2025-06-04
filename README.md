@@ -1,3 +1,9 @@
+# ODMAP-NOBMWG
+Is a modified version of the ODMAP protocol that extends and modifies it for inclusion into a larger model evaluation tool. This is a work in progress and is subject to frequent changes. 
+
+
+The original ODMAP readme follows:
+
 # ODMAP
 Species distribution models (SDMs) constitute the most common class of biodiversity models. The advent of ready-to-use software packages and increasing availability of digital geo-information have considerably assisted the application of SDMs in recent years enabling their use in informing conservation and management, and quantifying impacts from global change.
 
