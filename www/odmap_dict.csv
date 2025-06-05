@@ -5,6 +5,8 @@ running_number,section,section_id,subsection,subsection_id,element,element_id,el
 4,Overview,o,Authorship,o_authorship,Study link,o_authorship_4,"Link to study if applicabe (DOI, web address)",text,,,0,1,1,1,,,,
 1,Overview,o,Model objective,o_objective,Model objective,o_objective_1,Model objective,objective,,,0,1,1,1,,,,
 2,Overview,o,Model objective,o_objective,Target output,o_objective_2,"Main target output: e.g., suitable vs. unsuitable habitat, continuous habitat suitability index, abundance",text,,,0,0,1,1,studyObjective,"rangeType,invasion,transfer,populationType",base,0
+3,Overview,o ,Model objective,o_objective,Model purpose,o_objective_3,Model purpose,,What is the primary purpose of the model? What question was it built to answer?,,0,1,1,1,,,,
+4,Overview,o ,Model objective,o_objective,Model context,o_objective_4,Model context,,"What would you like evaluators to know about your model in order to interpret the results? Provide examples of limitations and incorrect interpretations, as well as caveats for particular types of species.",,0,1,1,1,,,,
 1,Overview,o,Model applications,o_applications,Model applications details,o_applications_1,Application details,text_details,"For each model application select the appropriateness of your model.<br>      
 <b>High:</b> Use of this model for this utility and/or applicability is HIGHLY appropriate,    <br>
 <b>Medium:</b> Use of this model for this utility and/or applicability is SOMEWHAT appropriate,    <br>
