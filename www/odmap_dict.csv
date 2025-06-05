@@ -5,7 +5,13 @@ running_number,section,section_id,subsection,subsection_id,element,element_id,el
 4,Overview,o,Authorship,o_authorship,Study link,o_authorship_4,"Link to study if applicabe (DOI, web address)",text,,,0,1,1,1,,,,
 1,Overview,o,Model objective,o_objective,Model objective,o_objective_1,Model objective,objective,,,0,1,1,1,,,,
 2,Overview,o,Model objective,o_objective,Target output,o_objective_2,"Main target output: e.g., suitable vs. unsuitable habitat, continuous habitat suitability index, abundance",text,,,0,0,1,1,studyObjective,"rangeType,invasion,transfer,populationType",base,0
-1,Overview,o,Model applications,o_applications,Model applications details,o_applications_1,Application details,text_details,"Work in progress, please create a copy of <a href=""https://docs.google.com/spreadsheets/d/1F4KWF4D7ybgK9NFNKoezpeTCrzvYLtUPqGELh2AzaE0/edit?usp=sharing"" target=""_blank"">this table</a>, fill it in, and provide a link in the text box below. ",,0,1,1,1,,,,
+1,Overview,o,Model applications,o_applications,Model applications details,o_applications_1,Application details,text_details,"For each model application select the appropriateness of your model.<br>      
+<b>High:</b> Use of this model for this utility and/or applicability is HIGHLY appropriate,    <br>
+<b>Medium:</b> Use of this model for this utility and/or applicability is SOMEWHAT appropriate,    <br>
+<b>Low:</b> Use of this model for this utility and/or applicability is RARELY appropriate,    <br>
+<b>Inappropriate:</b> Use of this model for this utility and/or applicability is NOT appropriate    <br> <br>
+
+Work in progress, please create a copy of <a href=""https://docs.google.com/spreadsheets/d/1F4KWF4D7ybgK9NFNKoezpeTCrzvYLtUPqGELh2AzaE0/edit?usp=sharing"" target=""_blank"">this table</a>, fill it in, and provide a link in the text box below. ",,0,1,1,1,,,,
 1,Overview,o,Focal Taxon,o_taxon,Focal Taxon,o_taxon_1,Focal taxon,text,,,0,1,1,1,,,,
 2,Overview,o,Focal Taxon,o_taxon,Focal taxon rationale,o_taxon_2,"Explain why single or multiple species were selected? ( e.g., focal species from a specific taxonomic group, specific habitat (e.g., boreal forest), conservation significance, etc.)",text,,,0,1,1,1,,,,
 1,Overview,o,Location,o_location,Location,o_location_1,"Location of the study area: Jurisdictions (e.g., Canada or Provinces/Territories), ecoregions, watersheds, species geographic range, minimum convex polygon, etc.",text,,,0,1,1,1,,,,
