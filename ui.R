@@ -91,7 +91,11 @@ ui <-  tagList(
         
         h5("Download protocol", style = "font-weight: bold"),
         radioButtons("document_format", label = NULL, choices = c("csv", "docx")),
-        downloadButton("protocol_download")
+        downloadButton("protocol_download"),
+        
+        h5("Send metadata to evaluation protocol", style = "font-weight: bold"),
+        actionButton("send_to_evaluation", label = "Send", 
+                     icon = icon("arrow-up-right-from-square"))
       ),
       
       mainPanel(
