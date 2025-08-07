@@ -26,13 +26,45 @@ ui <-  tagList(
     selected = "create",
   
     # HOME TAB
-    tabPanel("What is ODMAP?", value = "about", fluidPage(
+    
+    tabPanel("MODEL EVALUATION TOOL", value = "about", fluidPage(
+      fluidRow(
+        column(width = 2),
+        column(width = 8,
+               h1(strong("The Model Evaluation Tool (MET)")),
+               p("The Model Evaluation Tool (MET) is an interactive application to evaluate Species Distribution Models (SDMs) and extract relevant information for decision making.
+                 It integrates multiple modules, providing functionality for modelers, evaluators and multiple users.",
+                 h3("Model development module"),
+                 p("Modelers will be able to upload model materials (inputs, outputs and metadata) to the MET. It can be used either during model design and implementation to help modelers to inform their decisions or after models have been implemented. To do this, we customized the ",
+                         a(href = ' https://odmap.wsl.ch/', "ODMAP", target = "_blank", .noWS = "outside"),
+                         " Shiny app from (",
+                         a(href = 'https://doi.org/10.1111/ecog.04960', "Zurell et al. 2020", target = "_blank", .noWS = "outside"),
+                         "),", style= "font-size: 18px;"),
+                 h3("Model evaluation module"),
+                 p("Evaluators will be able to navegate, inquire and provide feedback on model materials. To do this, we developed a new protocol merging the metadata and model materials uploaded by modelers and a set of questions for evaluators to conduct a thorough evaluation of the model.", style= "font-size: 18px;"),
+                 style= "font-size: 18px;"),
+                h3("Model reporting module"),
+               
+                 p("This module will allow to generate both a summary of the model created by the modeler and a summary of the model evaluation created by the evaluator", style= "font-size: 18px;"),
+
+                 p("This module will also allow multiple users will be able to extract and summarize relevant information from the predictions and uncertainty outputs to fulfill multiple users needs.", style= "font-size: 18px;"),
+                 
+        h3("Model synthesis module"),
+        
+        p("This module will integrate feedback and synthesize evaluations from multiple evaluators to inform relevant actions for model improvement.", style= "font-size: 18px;"),
+               img(src = "MET_Approach.jpg", width = "100%", style="display: block; margin-left: auto; margin-right: auto; min-width: 500px;"), br(),
+               
+               )),
+      column(width = 2)
+    )),
+    
+
+    
+    tabPanel("What is ODMAP?", value = "whatis", fluidPage(
       fluidRow(
         column(width = 2),
         column(width = 8, 
-               h1(strong("This is a beta version of an updated ODMAP for the NOBMWG")),
-               p("Please note that kniting, saving, importing, and exporting functions are not currently supported.",
-                 "Please use the 'Create a protocol' tab only."),
+               
                p("What is ODMAP?", style = "padding-top: 10px; font-size: 30px; font-weight:bold;"),
                p("Species distribution models (SDMs) constitute the most common class of biodiversity models. The advent of ready-to-use software packages and
              increasing availability of digital geo-information have considerably assisted the application of SDMs in recent years  enabling their use in
@@ -83,6 +115,10 @@ ui <-  tagList(
         style = "position:fixed; width: 16%;",
         width = 2,
         
+        h5("Select fields", style = "font-weight: bold"),
+        uiOutput("category_checkboxes"),
+        
+        
         h5("Progress", style = "font-weight: bold"),
         uiOutput("progress_bars"),
         
@@ -105,20 +141,25 @@ ui <-  tagList(
             div(
               style = "height: 80vh; overflow-y: auto;",
               h3("Glossary"),
-              DT::dataTableOutput("glossary_table", height = "900"),
-              width = 5
-            )
+              DT::dataTableOutput("glossary_table", height = "600"),
+              width = 6
+            ),
           ), 
           mainPanel(
+            uiOutput("dynamic_content_1"),
             tabsetPanel(
               id = "tabset",
               tabPanel("1. Overview", value = "Overview",  fluidPage(
-                em(p("Give a brief overview of all important parts of your study.", style = "padding-top: 10px; font-weight: 300;")),
+                p("Please provide a comprehensive overview of all important parts of your study.", style = "padding-top: 10px; font-weight: 300;"),
+                em(p("Note: we provide some examples along the ODMAP, using the ",
+                     a(href = 'https://borealbirds.ca/', 'Boreal Avian Modelling Initiative BAM-v4', target = "_blank", .noWS = "outside"), style = "padding-top: 10px; font-weight: 300;")),
                 uiOutput("Overview_UI")
-              )),
+               
+              )
+              ),
               
               tabPanel("2. Data", value = "Data", fluidPage(
-                em(p("Describe your your data in detail.", style = "padding-top: 10px; font-weight: 300")),
+                em(p("Describe your your model inputs in detail: Biodviersity and covariates data sets.", style = "padding-top: 10px; font-weight: 300")),
                 uiOutput("Data_UI")
               )),
               
@@ -133,11 +174,11 @@ ui <-  tagList(
               )),
               
               tabPanel("5. Prediction", value = "Prediction", fluidPage(
-                em(p("Describe your model predictions in detail.", style = "padding-top: 10px; font-weight: 300")),
+                em(p("Describe your model predictions and uncertainty in detail.", style = "padding-top: 10px; font-weight: 300")),
                 uiOutput("Prediction_UI")
               )) 
             ),
-            width = 7
+            width = 8
           ),
           position = "right",
         ),

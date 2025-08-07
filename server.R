@@ -10,34 +10,149 @@ library(rangeModelMetadata)
 odmap_dict = read.csv("www/odmap_dict.csv", header = T, stringsAsFactors = F)
 glossary = read.csv("www/glossary.csv", header = T, stringsAsFactors = F)
 rmm_dict = rmmDataDictionary()
+#rmmSuggest('model$partition$partitionSet')
 
 server <- function(input, output, session) {
   # ------------------------------------------------------------------------------------------#
   #                           Rendering functions for UI elements                             # 
   # ------------------------------------------------------------------------------------------#
-  render_text = function(element_id, element_placeholder){
+
+  
+  #### adding a checkbox to select fields based on their relative importance
+  
+  field_importance = list("Essential" = pull(odmap_dict %>% filter(field_relevance == 1), element_id),
+                          "Informative" = pull(odmap_dict %>% filter(field_relevance == 2), element_id),
+                          "Complementary" = pull(odmap_dict %>% filter(field_relevance == 3), element_id)
+  )
+  
+  
+  
+  # adding checkbox for fields
+  output$category_checkboxes <- renderUI({
+    
+    shiny::checkboxGroupInput(inputId = "selected_categories", label= NULL, choices = field_importance)
+    
+    
+  })
+  
+  filtered_items <- reactive({
+    # req(input$selected_categories) ensures that this reactive expression
+    # only proceeds if at least one category is selected. If no categories
+    # are selected, it will pause and not return an error.
+    req(input$selected_categories) 
+    
+    
+    relevance_numbers <- c()
+    if ("Essential" %in% input$selected_categories) {
+      relevance_numbers <- c(relevance_numbers, 1)
+    }
+    if ("Informative" %in% input$selected_categories) {
+      relevance_numbers <- c(relevance_numbers, 2)
+    }
+    if ("Complementary" %in% input$selected_categories) {
+      relevance_numbers <- c(relevance_numbers, 3)
+    }
+    
+    
+    odmap_dict %>%
+      # Filter the data where the 'Category' column is present in the vector
+      # of 'input$selected_categories' (the checkboxes the user has ticked).
+      filter(field_relevance %in% relevance_numbers)
+    
+    
+    
+    
+  })
+  
+  
+  
+  
+  
+  
+  render_suggestion = function(element_id, element_placeholder, suggestions){
+    suggestions = sort(trimws(unlist(strsplit(suggestions, ","))))
+    
+    selectizeInput(inputId = element_id, label = element_placeholder, choices = suggestions, multiple = TRUE, options = list(create = T,  dropdownParent = 'body',  maxOptions = 100, persist=F, placeholder = "Choose from list or insert new values"))
+  }
+  
+  
+  
+  
+  
+   render_text = function(element_id, element_placeholder){
     textAreaInput(inputId = element_id, label = element_placeholder, height = "45px", resize = "vertical")
   }
   
-  render_text_details = function(element_id, element_placeholder, details){
+  
+
+  render_text_details = function(element_id, element_placeholder, details) {
     tagList(
       element_placeholder, br(),
-      em(HTML(details)),
-      textAreaInput(inputId = element_id, label = NULL, height = "45px", resize = "vertical", 
-                    placeholder = NULL)
+      tags$details(
+        # Add a custom class for CSS styling (optional but good practice)
+        class = "collapsible-details",
+        tags$summary(
+          # The icon and text are wrapped in a div for better alignment if needed
+          tags$div(
+            icon("chevron-right", class = "chevron-icon"), # Chevron icon
+            tags$span(em("See an example"), class = "example-text-span") # Your text
+          )
+        ),
+        em(HTML(details))
+      
+    ),
+    # Add a style tag to include the CSS for the chevron rotation and color
+    tags$style(HTML("
+      /* Basic style for the details summary to make it look clickable */
+      .collapsible-details summary {
+        cursor: pointer;
+        list-style: none; /* Remove default marker */
+      }
+      .collapsible-details summary::-webkit-details-marker {
+        display: none; /* For WebKit browsers */
+      }
+
+      /* Style for the chevron icon */
+      .collapsible-details .chevron-icon {
+        transition: transform 0.2s ease-in-out; /* Smooth transition for rotation */
+        margin-right: 5px; /* Spacing between icon and text */
+        color: #007bff; /* <-- ADDED: Change to your desired color, e.g., blue */
+      }
+
+      /* Rotate the chevron when the details are open */
+      .collapsible-details[open] .chevron-icon {
+        transform: rotate(90deg); /* Rotate 90 degrees to point down */
+      }
+      
+      /* Style for the 'See an example' text span */
+      .example-text-span {
+        background-color: #cfeafa; /* ADDED: Light grey background, choose your color */
+        padding: 2px 5px; /* Optional: Add some padding around the text */
+        border-radius: 3px; /* Optional: Rounded corners */
+        display: inline-block; /* Ensures padding and background apply correctly */
+      }
+      
+    ")),
+    textAreaInput(inputId = element_id, label = NULL, height = "45px", resize = "vertical",
+                  placeholder = NULL)
     )
+  
   }
   
+  
   render_authors = function(){
+    
     div(
+      p("Main author/contact"),
       dataTableOutput("authors_table", width = "100%"),
-      actionButton("add_author", label = NULL, icon = icon("plus")),
+      actionButton("add_author", label = "Add new author", icon = icon("plus")),
       br(), br()
     )
   }
   
-  render_objective = function(element_id, element_placeholder){
+  render_objective = function(element_id, element_placeholder, details){
     selectizeInput(inputId = element_id, label = element_placeholder, multiple = F, options = list(create = F, placeholder = "Choose from list"),
+                   
                    choices = list("", "Inference and explanation", "Mapping and interpolation", "Forecast and transfer"))
   }
   
@@ -63,13 +178,13 @@ server <- function(input, output, session) {
   
   render_suggestion = function(element_id, element_placeholder, suggestions){
     suggestions = sort(trimws(unlist(strsplit(suggestions, ","))))
-    selectizeInput(inputId = element_id, label = element_placeholder, choices = suggestions, multiple = TRUE, options = list(create = T,  placeholder = "Choose from list or insert new values"))
+    selectizeInput(inputId = element_id, label = element_placeholder, choices = suggestions, multiple = TRUE, options = list(create = T,  dropdownParent = 'body',   persist=F, placeholder = "Choose from list or insert new values"))
   }
   
   render_extent = function(element_id){
     if(element_id == "o_scale_1"){
       tagList(
-        p("Spatial extent (long/lat)"),
+        p("Bounding box or spatial extent (Longitude/Latitude)"),
         splitLayout(
           cellWidths = c( "150px", "150px", "150px", "150px"),
           textAreaInput(inputId = paste0(element_id, "_xmin"), label = "xmin", height = "45px", resize = "none"),
@@ -80,7 +195,7 @@ server <- function(input, output, session) {
       )
     } else {
       tagList(
-        p("Spatial extent"),
+        p("Bounding box or spatial extent (Longitude/Latitude)"),
         splitLayout(
           cellWidths = c("150px", "150px", "150px", "150px"),
           textAreaInput(inputId = paste0(element_id, "_xmin"), label = "xmin", height = "45px", resize = "none"),
@@ -119,8 +234,8 @@ server <- function(input, output, session) {
   render_element = function(element_id, element_ui, info = TRUE){
     if(info) {
       element <- fluidRow(
-        column(11, element_ui),
-        column(1, div(actionButton(paste0("help_", element_id), label = "", icon = icon("info")),
+        column(10, element_ui),
+        column(1, div(actionButton(paste0("help_", element_id), label = "Definitions", icon = icon("goButton"), style="color: #fff; background-color: #bdbfbf; border-color: #2e6da4"),
                       style = "position: absolute;top: 15px;"))
       )
     } else {
@@ -222,7 +337,7 @@ server <- function(input, output, session) {
   }
   
   knit_authors = function(element_id){
-    paste(authors$df$first_name, authors$df$last_name, collapse = ", ")
+    paste(authors$df$first_name, authors$df$middle_name, authors$df$last_name, authors$df$affiliation, collapse = ", ")
   }
   
   knit_extent = function(element_id){
@@ -290,7 +405,7 @@ server <- function(input, output, session) {
       authors$df = authors$df[0,] # Delete previous entries
       for(i in 1:length(names_split)){
         author_tmp = names_split[[i]]
-        authors$df = rbind(authors$df, data.frame("first_name" = author_tmp[1],  "last_name" = author_tmp[2]))
+        authors$df = rbind(authors$df, data.frame("first_name" = author_tmp[1],  "middle_name" = author_tmp[2], "last_name" = author_tmp[3], "affiliation" = author_tmp[4]))
       }
     }
   }
@@ -335,7 +450,7 @@ server <- function(input, output, session) {
       authors$df = authors$df[0,] # Delete previous entries
       for(i in 1:length(names_split)){
         author_tmp = names_split[[i]]
-        authors$df = rbind(authors$df, data.frame("first_name" = author_tmp[2],  "last_name" = author_tmp[1]))
+        authors$df = rbind(authors$df, data.frame("first_name" = author_tmp[1],  "middle_name" = author_tmp[2], "last_name" = author_tmp[3], "affiliation" = author_tmp[4]))
       }
     }
   }
@@ -395,7 +510,7 @@ server <- function(input, output, session) {
   }
   
   export_authors = function(element_id){
-    return(ifelse(nrow(authors$df) > 0, paste(authors$df$first_name, authors$df$last_name, collapse = "; "), NA))
+    return(ifelse(nrow(authors$df) > 0, paste(authors$df$first_name, authors$df$middle_name, authors$df$last_name, authors$df$affiliation, collapse = "; "), NA))
   }
   
   export_suggestion = function(element_id){
@@ -453,29 +568,61 @@ server <- function(input, output, session) {
   # -------------------------------------------
   # "Create a protocol" - sidebarPanel elements
   get_progress = reactive({
-    progress = c()
+    progress = list() # Use a list to store both percentage and counts
+    
+    # Calculate total sections (optional, but good for "X of Y" overall if needed later)
+    # total_sections = length(unique(odmap_dict$section)) 
+    
     for(sect in unique(odmap_dict$section)){
-      all_elements = odmap_dict %>% 
-        filter(section == sect & !element_id %in% unlist(elem_hidden) & !element_type %in% c("model_setting", "author")) %>% 
-        filter(if(input$hide_optional) !element_id %in% elem_optional else T) %>% 
-        mutate(element_id = ifelse(element_type == "extent", paste0(element_id, "_xmin"), element_id)) %>%  
+      all_elements = odmap_dict %>%
+        filter(section == sect & !element_id %in% unlist(elem_hidden) & !element_type %in% c("model_setting", "author")) %>%
+        filter(if(input$hide_optional) !element_id %in% elem_optional else T) %>%
+        mutate(element_id = ifelse(element_type == "extent", paste0(element_id, "_xmin"), element_id)) %>%
         pull(element_id)
+      
       if(length(all_elements) == 0){
-        next 
+        # If no relevant elements in this section, assign 0% and 0/0 or handle as desired
+        progress[[sect]] = list(percentage = 0, completed_count = 0, total_count = 0)
+        next
       } else {
-        completed_elements = sum(sapply(all_elements, function(x){
+        completed_elements_count = sum(sapply(all_elements, function(x){
           !(identical(input[[x]], "") | identical(input[[x]], 0) | identical(input[[x]], NULL))
         }, USE.NAMES = T, simplify = T))
-        progress[sect] = (sum(completed_elements) / length(all_elements)) * 100
+        
+        percentage = (completed_elements_count / length(all_elements)) * 100
+        
+        # Store percentage and counts for this section
+        progress[[sect]] = list(
+          percentage = percentage,
+          completed_count = completed_elements_count,
+          total_count = length(all_elements)
+        )
       }
     }
     return(progress)
-  }) 
+  })
   
   output$progress_bars = renderUI({
-    progress = get_progress()
-    progress_UI_list = lapply(names(progress), function(sect){
-      progressBar(paste("progress", sect, sep = "_"), value = progress[sect], title = sect)
+    progress_data = get_progress() # Renamed to avoid conflict with 'progress' in loop
+    
+    progress_UI_list = lapply(names(progress_data), function(sect_name){ # Renamed 'sect' to 'sect_name'
+      data_for_sect = progress_data[[sect_name]]
+      
+      # Create the title string with counts
+      title_text = paste0(
+        sect_name, 
+        " (", 
+        data_for_sect$completed_count, 
+        " of ", 
+        data_for_sect$total_count, 
+        ")"
+      )
+      
+      progressBar(
+        id = paste("progress", sect_name, sep = "_"), # 'id' is often preferred over unnamed first argument for clarity
+        value = data_for_sect$percentage,
+        title = title_text
+      )
     })
     return(progress_UI_list)
   })
@@ -534,7 +681,7 @@ server <- function(input, output, session) {
         on.exit(setwd(wd_orig))
         file.copy(src, "protocol_output.Rmd", overwrite = TRUE)
         odmap_download = rmarkdown::render("protocol_output.Rmd", rmarkdown::word_document(),
-                                           params = list(study_title = paste(input$o_authorship_1), authors = paste(authors$df$first_name, authors$df$last_name, collapse = ", ")))
+                                           params = list(study_title = paste(input$o_authorship_1), authors = paste(authors$df$first_name, authors$df$middle_name, authors$df$last_name, authors$df$affiliation, collapse = ", ")))
         file.rename(odmap_download, file)
       }
     }
@@ -686,7 +833,7 @@ server <- function(input, output, session) {
       }
     }
     if(print_message){
-      showNotification("Please enter valid latitude/longitude coordinates", duration = 3, type = "error")  
+      showNotification("Please enter valid latitude/longitude coordinates", duration = 4, type = "error")  
     }
   })
   
@@ -790,10 +937,11 @@ server <- function(input, output, session) {
   
   # -------------------------------------------
   # Authors
-  authors = reactiveValues(df = data.frame("first_name" = character(0),  "last_name" = character(0))) 
+  authors = reactiveValues(df = data.frame("first_name" = character(0),  "middle_name" = character(0), "last_name" = character(0), "affiliation" = character(0))) 
   
   output$authors_table = DT::renderDataTable({
     if(nrow(authors$df) == 0){
+     
       authors_dt = datatable(authors$df, escape = F, rownames = F, colnames = NULL, 
                              options = list(dom = "t", ordering = F, language = list(emptyTable = "Author list is empty"), columnDefs = list(list(className = 'dt-left', targets = "_all"))))
     } else {
@@ -805,7 +953,7 @@ server <- function(input, output, session) {
                                                                                      onclick = 'Shiny.setInputValue(\"remove_author\", this.id, {priority: "event"})'))})) %>% 
         dplyr::select(-row_id)
       
-      authors_dt = datatable(authors_tmp, escape = F, rownames = F, editable = T, colnames = c("First name", "Last name", ""), 
+      authors_dt = datatable(authors_tmp, escape = F, rownames = F, editable = T, colnames = c("First name", "Middle name (initial)", "Last name", "Affiliation",  ""), 
                              options = list(dom = "t", autoWidth = F, 
                                             columnDefs = list(list(width = '10%', targets = c(2)), 
                                                               list(width = '45%', targets = c(0:1)),
@@ -818,7 +966,9 @@ server <- function(input, output, session) {
     showModal(
       modalDialog(title = "Add new author", footer = NULL, easyClose = T,
                   textInput("first_name", "First name"),
+                  textInput("middle_name", "Middle name (initial, if needed)"),
                   textInput("last_name", "Last name"),
+                  textInput("affiliation", "Affiliation"),
                   actionButton("save_new_author", "Save")
       )
     )
@@ -826,9 +976,9 @@ server <- function(input, output, session) {
   
   observeEvent(input$save_new_author, {
     if(input$first_name == "" | input$last_name == ""){
-      showNotification("Please provide first and last name", duration = 3, type = "message")
+      showNotification("Please provide first, middle name, last name and affiliation", duration = 4, type = "message")
     } else {
-      new_author = data.frame("first_name" = input$first_name, "last_name" = input$last_name, stringsAsFactors = F)
+      new_author = data.frame("first_name" = input$first_name, "middle_name" = input$middle_name,"last_name" = input$last_name, "affiliation" = input$affiliation, stringsAsFactors = F)
       authors$df = rbind(authors$df, new_author)
       removeModal()
     }
