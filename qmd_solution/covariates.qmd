@@ -1,0 +1,203 @@
+---
+title: "predicotrs"
+format: html
+editor: visual
+---
+
+```{r}
+library(shiny)
+library(DT) # For interactive tables
+library(dplyr)
+library(htmltools)
+library(purrr)
+
+# Read the CSV file
+# Ensure the file path is correct and accessible
+# Using a dummy data frame for demonstration if the file path is not readily available
+# In a real application, make sure "C:/ODMAP-NOBMWG/www/Covariates_BAM.csv" exists and is accessible.
+if (file.exists("C:/ODMAP-NOBMWG/www/Covariates_BAM.csv")) {
+  data_covariates <- read.csv("C:/ODMAP-NOBMWG/www/Covariates_BAM.csv") %>%
+    dplyr::select(category, definition, source, resolution)
+} else {
+  # Create dummy data if the file is not found
+  data_covariates <- data.frame(
+    category = c("Category A", "Category B", "Category C"),
+    definition = c("Definition for A", "Definition for B", "Definition for C"),
+    source = c("Source A", "Source B", "Source C"),
+    resolution = c("Resolution A", "Resolution B", "Resolution C")
+  )
+  warning("CSV file not found. Using dummy data for demonstration.")
+}
+
+
+# Define UI for application
+ui <- fluidPage(
+  titlePanel("Select covariates from the list, then submit"),
+
+  sidebarLayout(
+    sidebarPanel(
+     
+       h4("1. Select from the list"),
+      
+       br(),
+       
+      h5("1a. If not in the list: add new entry:"),
+      textInput("new_category", "Category"),
+      textInput("new_definition", "Definition"),
+      textInput("new_source", "Source"),
+      textInput("new_resolution", "Resolution"),
+      actionButton("add_new_entry", "Add New Entry to List"),
+            hr(), # Horizontal rule to separate sections
+             hr(),
+              hr(),
+              hr(),
+              hr(),
+              hr(),
+       actionButton("submit_selection", "2. Submit Selection")
+      
+      
+    ),
+    mainPanel(
+      DTOutput("my_table"),
+      h4("Covariates selected:"),
+      DTOutput("selected_data_table")
+    )
+  )
+)
+
+# Define server logic
+server <- function(input, output, session) {
+
+  # Create some sample data
+  data <- reactive({
+    data_covariates
+  })
+
+  # Reactive value to store newly added entries
+  new_entries <- reactiveVal(
+    data.frame(
+      category = character(0),
+      definition = character(0),
+      source = character(0),
+      resolution = character(0),
+      stringsAsFactors = FALSE
+    )
+  )
+
+  # Observe event for adding new entry
+  observeEvent(input$add_new_entry, {
+    req(input$new_category, input$new_definition, input$new_source, input$new_resolution)
+
+    new_row <- data.frame(
+      category = input$new_category,
+      definition = input$new_definition,
+      source = input$new_source,
+      resolution = input$new_resolution,
+      stringsAsFactors = FALSE
+    )
+
+    current_entries <- new_entries()
+    new_entries(rbind(current_entries, new_row))
+
+    # Clear input fields after adding
+    updateTextInput(session, "new_category", value = "")
+    updateTextInput(session, "new_definition", value = "")
+    updateTextInput(session, "new_source", value = "")
+    updateTextInput(session, "new_resolution", value = "")
+  })
+
+  # Render the DataTable with checkboxes
+  output$my_table <- renderDT({
+    datatable(
+      data(),
+      extensions = 'Select', # Enable row selection
+      options = list(
+        dom = 't', # Only show the table, hide search/pagination
+        paging = FALSE,
+        ordering = FALSE,
+        select = list(style = 'multi', selector = 'td:first-child'), # Enable multi-row selection with checkbox in first column
+        scrollY = "300px",
+        scrollX = T,
+        scrollCollapse = T
+      ),
+      selection = 'none', # Disable default DT row selection to use custom checkboxes
+      callback = JS(
+        "table.on('click', 'td:first-child', function(){", # Listen for clicks on the first column (checkbox)
+        "  var row_index = table.cell(this).index().row;",
+        "  var row_data = table.row(row_index).data();",
+        "  var checkbox = $(this).find('input[type=\"checkbox\"]');",
+        "  if (checkbox.prop('checked')) {",
+        "    table.row(row_index).deselect();", # Deselect if checkbox is checked
+        "  } else {",
+        "    table.row(row_index).select();", # Select if checkbox is unchecked
+        "  }",
+        "});",
+        "table.on('select', function(e, dt, type, indexes){", # When a row is selected programmatically
+        "  if (type === 'row') {",
+        "    var checkbox = dt.cells(indexes, 0).nodes().to$().find('input[type=\"checkbox\"]');",
+        "    checkbox.prop('checked', true);",
+        "  }",
+        "});",
+        "table.on('deselect', function(e, dt, type, indexes){", # When a row is deselected programmatically
+        "  if (type === 'row') {",
+        "    var checkbox = dt.cells(indexes, 0).nodes().to$().find('input[type=\"checkbox\"]');",
+        "    checkbox.prop('checked', false);",
+        "  }",
+        "});",
+        "return table.column(0).nodes().to$().each(function(i, td) {", # Add checkbox to the first column
+        "  $(td).html('<input type=\"checkbox\">');",
+        "});"
+      )
+    )
+  }, server = FALSE) # server = FALSE for client-side processing, which is easier for checkbox integration
+
+  # Reactive value to store selected and newly added rows after submission
+  submitted_final_data <- eventReactive(input$submit_selection, {
+    # Get the row indices of selected rows from DT
+    selected_indices <- input$my_table_rows_selected
+    existing_selected_data <- data.frame()
+
+    if (length(selected_indices) > 0) {
+      existing_selected_data <- data()[selected_indices, ]
+    }
+
+    # Combine existing selected data with newly added data
+    final_data <- rbind(existing_selected_data, new_entries())
+
+    if (nrow(final_data) > 0) {
+      return(final_data)
+    } else {
+      # Return an empty data frame with correct column names if no rows are selected or added
+      return(data.frame(
+        category = character(0),
+        definition = character(0),
+        source = character(0),
+        resolution = character(0),
+        stringsAsFactors = FALSE
+      ))
+    }
+  })
+
+  # Display the submitted selection and new entries in a new DataTable
+  output$selected_data_table <- renderDT({
+    # Ensure the table is rendered only when submitted_final_data has data or new_entries are present
+    req(submitted_final_data())
+
+    datatable(
+      submitted_final_data(),
+      options = list(
+        dom = 't', # Only show the table
+        paging = FALSE,
+        ordering = FALSE,
+        scrollY = "300px",
+        scrollX = T,
+        scrollCollapse = T
+      ),
+      rownames = FALSE # Do not show row names in the output table
+    )
+  })
+}
+
+# Run the application
+shinyApp(ui = ui, server = server)
+```

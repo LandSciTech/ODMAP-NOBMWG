@@ -1,0 +1,404 @@
+---
+title: "model_utility"
+format: html
+editor: visual
+---
+
+```{r}
+# ui.R
+library(shiny)
+library(dplyr) # For data manipulation, especially if items/subitems get complex
+
+# --- Data Loading (moved to server for better Shiny practice if it's dynamic, but keeping global for now as per original) ---
+# NOTE: For this to run, ensure 'model_utility.csv' is in a 'www' subfolder of your app directory
+# or provide a full path accessible by the Shiny app.
+# For demonstration purposes without an actual file, I'll simulate this data.
+# model_utility_df <- read.csv("C:/ODMAP-NOBMWG/www/model_utility.csv", header=T, sep=",")
+# model_utility_df <- model_utility_df[order(model_utility_df$Category, decreasing = F),]
+
+# Simulated model_utility_df for demonstration if CSV is not available
+model_utility_df <- read.csv("C:/ODMAP-NOBMWG/www/model_utility.csv", header=T, sep=",")
+model_utility_df <- model_utility_df[order(model_utility_df$Category, decreasing = F),]
+
+link_data <- data.frame(unlist(strsplit(model_utility_df$Author, ",")), unlist(strsplit(model_utility_df$References, ",")),stringsAsFactors = FALSE)
+colnames(link_data) <- c("Author", "References")
+
+
+# --- Function to create a list of categories with their unique items ---
+#' Creates a nested list where top-level elements are unique CategoryNames,
+#' and each element contains a vector of unique ItemNames belonging to that category.
+#'
+#' @param df The data frame containing item information (must have Category and Options columns).
+#' @return A list with CategoryNames as keys and vectors of Options as values.
+create_category_items_list <- function(df) {
+  # Get all unique CategoryNames
+  unique_categories <- unique(df$Category)
+
+  # Initialize an empty list to store the results
+  category_items_list <- list()
+
+  # Loop through each unique category
+  for (category in unique_categories) {
+    # Filter the data frame for the current category
+    # Then select unique Options within that category
+    items_in_category <- df %>%
+      filter(Category == category) %>%
+      distinct(Options) %>%
+      pull(Options) # Convert to a simple vector
+
+    # Add the vector of items to the list, using the category name as the key
+    category_items_list[[category]] <- items_in_category
+  }
+
+  return(category_items_list)
+}
+
+# Define classifications
+classifications <- c("High", "Medium", "Low", "Inappropriate")
+
+ui <- fluidPage(
+  titlePanel("Please select the potential utility of your model (one by one)."),
+    "The following list will help you to find the potenial uses and applications of your model. We organize them into categories (1) and options (2) within those categories. There is a field to add options in case you did not find one that accomodate your utility.",
+
+"Please select the ones you think best fit your model and classify them using the scale below (3):",    
+tags$ul(
+
+tags$li("High: Use of this model for this utility and/or applicability is HIGHLY appropriate"),
+
+tags$li("Medium: Use of this model for this utility and/or applicability is SOMEWHAT appropriate"),
+
+tags$li("Low: Use of this model for this utility and/or applicability is RARELY appropriate"),
+
+tags$li("Inappropriate: Use of this model for this utility and/or applicability is NOT appropriate")
+),
+
+"In the comment section you ca elaborate on the potential use and/or application of your model. You might provide examples of limitations and incorrect interpretations.",
+br(),
+
+  sidebarLayout(
+    sidebarPanel(
+      
+      # Select main items
+      selectInput(
+        inputId = "main_items",
+        label = "1. Category:",
+        choices = c("Select one", names(create_category_items_list(model_utility_df))), # Initial choices
+       # selected = "Select one category", # No initial selection
+        multiple = FALSE
+      ),
+
+    
+      hr(), # Horizontal rule for separation
+
+      # Dynamic UI for subitem selection based on main_items
+      uiOutput("subitem_selection_ui"),
+      
+      
+       hr(), # Horizontal rule for separation
+
+      # New section for adding subitems
+     # h4("Add New Option to Selected Category"),
+      conditionalPanel(
+        condition = "input.main_items != 'Select an option' && input.main_items != ''", # Only show if a main category is selected
+        p(strong("If not in the list, then create a new Option below: "), textOutput("current_category_for_option", inline = TRUE)),
+        textInput(
+          inputId = "new_subitem_name",
+          label = " ",
+          placeholder = "Describe the new Option here..."
+        ),
+        actionButton(
+          inputId = "add_new_subitem_btn", # Button to add the new subitem
+          label = "Add New Option",
+          icon = icon("plus"),
+          class = "btn-warning" # Orange button for adding new options
+        )
+      ),
+     
+    
+
+
+      # Classification
+      radioButtons(
+        inputId = "classification",
+        label = "3. Appropriatness classification:",
+        choices = classifications,
+        selected = "Medium" # Default selection
+      ),
+
+      # Comments
+      textAreaInput(
+        inputId = "comments",
+        label = "4. Comments:",
+        rows = 3,
+        placeholder = "Add your comments here..."
+      ),
+
+      # Action button to add to list
+      actionButton(
+        inputId = "add_to_list",
+        label = "5. Add to List",
+        icon = icon("plus-circle")
+      )
+    ),
+
+    mainPanel(
+      
+    
+      
+      
+      h3("Summary of selected Items List"),
+      # Display the accumulated list
+      tableOutput("selected_items_table"),
+
+      # Optional: Download button
+      downloadButton("download_data", "Download List (CSV)"),
+       hr(),
+       hr(),
+       hr(),
+      
+       h3("Important Web Resources:"),
+      hr(),
+
+      # --- This is the key part for scrolling ---
+      # We create a div with specific CSS styles to enable scrolling.
+      # style:
+      #   height: Sets the fixed height of the scrollable area. Adjust as needed.
+      #   overflow-y: scroll; Ensures a vertical scrollbar appears if content overflows.
+      #   border: Adds a visible border around the scrollable area.
+      #   padding: Adds space inside the border.
+      #   background-color: Light background for clarity.
+      tags$div(
+        id = "scrollableLinksContainer", # Assign an ID for potential external CSS later
+        style = "height: 250px; overflow-y: scroll; border: 1px solid #ccc;
+                 padding: 15px; background-color: #f9f9f9; border-radius: 5px;",
+        uiOutput("scrollableLinkList") # Placeholder for our dynamic links
+      ),
+
+      hr(),
+      p("End of the scrollable resources list.")
+     
+      
+ 
+      
+      
+      
+    )
+  )
+)
+
+# server.R
+server <- function(input, output, session) {
+
+  # Reactive value to store the mutable items_data list
+  # This list will be updated when new subitems are added
+  reactive_items_data <- reactiveVal(create_category_items_list(model_utility_df))
+
+  # Reactive value to store the accumulated selected items
+  selected_items_list <- reactiveVal(
+    data.frame(
+      MainItem = character(),
+      SubItem = character(),
+      Classification = character(),
+      Comments = character(),
+      Author = character(),
+      References = character(),
+      stringsAsFactors = FALSE
+    )
+  )
+
+  # Display the currently selected main category name for context in the 'add option' section
+  output$current_category_for_option <- renderText({
+    if (input$main_items == "Select an option" || is.null(input$main_items) || input$main_items == "") {
+      "None Selected"
+    } else {
+      input$main_items
+    }
+  })
+
+  # Dynamic UI for subitem selection based on main_items
+
+  output$subitem_selection_ui <- renderUI({
+    req(input$main_items) # Ensure main_items are selected
+
+    if (input$main_items == "Select an option") {
+      # If "Select an option" is chosen, show a disabled/empty subitem dropdown
+      return(
+        selectInput(
+          inputId = "sub_items",
+          label = "2. Option selected:",
+          choices = "Please select a main option first",
+          selected = "Please select a main option first",
+          multiple = FALSE#,
+        #  disabled = TRUE # Disable the dropdown
+        )
+      )
+    }
+
+    # Get all subitems for the selected main items from the reactive list
+    available_subitems <- reactive_items_data()[[input$main_items]]
+
+    selectInput(
+      inputId = "sub_items",
+      label = "2. Option:",
+      choices = available_subitems,
+      multiple = FALSE # Single selection for subitems
+    )
+  })
+  
+  
+  
+
+
+
+
+
+
+
+
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+
+  # Observe the "Add New Option" button click
+  observeEvent(input$add_new_subitem_btn, {
+    req(input$main_items) # Ensure a main category is selected
+    req(input$new_subitem_name) # Ensure a new subitem name is entered
+
+    if (input$main_items == "Select an option") {
+      showNotification("Please select a main option before adding a new option.", type = "warning", duration = 3)
+      return()
+    }
+
+    current_items_list <- reactive_items_data()
+    current_main_item <- input$main_items
+    new_subitem_to_add <- input$new_subitem_name
+
+    # Check if the subitem already exists for this main category
+    if (new_subitem_to_add %in% current_items_list[[current_main_item]]) {
+      showNotification(
+        paste0("Option '", new_subitem_to_add, "' already exists for '", current_main_item, "'."),
+        type = "warning", duration = 5
+      )
+      return()
+    }
+
+    # Add the new subitem
+    current_items_list[[current_main_item]] <- sort(unique(c(current_items_list[[current_main_item]], new_subitem_to_add)))
+    reactive_items_data(current_items_list) # Update the reactive value
+
+    # Clear the text input
+    updateTextInput(session, "new_subitem_name", value = "")
+
+    showNotification(
+      paste0("Option '", new_subitem_to_add, "' added to '", current_main_item, "'."),
+      type = "message", duration = 3
+    )
+
+    # Optionally, select the newly added subitem
+    updateSelectInput(session, "sub_items", selected = new_subitem_to_add)
+  })
+
+
+  # Observe the "Add to List" button click
+  observeEvent(input$add_to_list, {
+    # Ensure both main and sub items are selected before adding
+    req(input$main_items, input$sub_items)
+
+    if (input$main_items == "Select an option") {
+      showNotification("Please select a valid main option before adding to list.", type = "warning", duration = 3)
+      return()
+    }
+    if (input$sub_items == "Please select a main option first") { # Check against the disabled default
+      showNotification("Please select a sub-option before adding to list.", type = "warning", duration = 3)
+      return()
+    }
+
+
+    # Prepare data for the new row
+    # Since sub_items and main_items are single-select, no need for rep() and complex filtering
+    new_row <- data.frame(
+      Category = input$main_items,
+      Option = input$sub_items,
+      Appropriatness = input$classification,
+      Comments = input$comments,
+      stringsAsFactors = FALSE
+    )
+
+    # Update the reactive value by appending the new row
+    current_list <- selected_items_list()
+    updated_list <- rbind(current_list, new_row)
+    selected_items_list(updated_list)
+
+    # Optional: Clear inputs after adding
+    updateSelectInput(session, "main_items", selected = "Select an option") # Reset to default
+    updateSelectInput(session, "sub_items", selected = character(0)) # Clear subitem selection
+    updateRadioButtons(session, "classification", selected = "Medium")
+    updateTextAreaInput(session, "comments", value = "")
+  })
+
+  # Render the table of selected items
+  output$selected_items_table <- renderTable({
+    # Display a message if the table is empty
+    if (nrow(selected_items_list()) == 0) {
+      return(data.frame(Message = "No items added yet. Select options and click 'Add to List'."))
+    }
+    selected_items_list()
+  })
+
+  # Download handler for the data
+  output$download_data <- downloadHandler(
+    filename = function() {
+      paste("selected_items_", Sys.Date(), ".csv", sep = "")
+    },
+    content = function(file) {
+      write.csv(selected_items_list(), file, row.names = FALSE)
+    }
+  )
+  
+  
+ 
+
+   output$scrollableLinkList <- renderUI({
+
+    if (nrow(link_data) == 0) {
+      return(p("No links available to display."))
+    }
+
+    # Generate a list of HTML <li> elements, each containing a link and its description.
+    link_elements <- lapply(1:nrow(link_data), function(i) {
+      current_name <- link_data$Author[i]
+      current_url <- link_data$References[i]
+     # current_description <- link_data$Description[i]
+
+      tags$li(
+        tags$p(
+          tags$a(href = current_url, target = "_blank", current_name,
+                 style = "font-weight: bold; margin-right: 5px; text-decoration: none; color: #0056b3;")
+        )
+      )
+    })
+
+    # Wrap all the generated <li> elements in an <ul> (unordered list).
+    # Add some styling to the ul itself for better appearance inside the scrollable div.
+    tags$ul(
+      link_elements,
+      style = "list-style-type: none; padding-left: 0; margin-top: 0;" # Remove default bullets and padding
+    )
+  })
+  
+}
+
+# Run the application
+shinyApp(ui = ui, server = server)
+```
+
+

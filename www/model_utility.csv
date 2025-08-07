@@ -1,0 +1,53 @@
+Category,Options,Author,References
+Understanding ecological relationships,"Understanding how species relate to and respond to environmental conditions, including climate, habitat, and other factors.",,
+Understanding ecological relationships,"Detection and estimation of rare species
+(e.g., Lomba et al. 2010, Zhang et al. 2020, Chiffard et al. 2020, McCune 2016)","Lomba et al. (2010), Zhang et al. (2020), Chiffard et al. (2020), McCune (2016)","https://www.sciencedirect.com/science/article/abs/pii/S0006320710003137, https://www.nature.com/articles/s41598-020-69157-x, https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.13399, https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/1365-2664.12702"
+Understanding ecological relationships,"Evolutionary studies (Incorporating phylogenies)
+(e.g.,Sharma et al. 2024)",,
+Predicting spatial patterns,Species distributions,,
+Predicting spatial patterns,Species densities,,
+Predicting spatial patterns,"Spatial patterns of species assemblages (Guisan & Rahbeck 2011, Calabrese et al. 2013, Murphy & Smith 2021)",,
+"Report distribution, abundances, niches","Using citizen science (opportunistic) data as an input of SMDs
+(e.g., Feldman et al. 2021, Tiago et al. 2017)",,
+"Report distribution, abundances, niches","Reconstruct historical climate distributions (e.g., Barlow et al. 2021)",,
+Identify species spatial knowledge gaps,Identify areas with low data coverage,,
+Identify species spatial knowledge gaps,"Identify areas where more data is needed to reduce uncertainty (i.e., areas where the model's predictions are less certain or have low confidence intervals can indicate regions where more data is needed)",,
+Test multiple assumptions,Assessing the effect of spatial scale on species-environment relationships (Mertes & Jetz 2017),,
+Test multiple assumptions,"Disentangling biotic interactions, environmental filters, and dispersal limitation
+ (D’Amen et al. 2017)",,
+Survey planning and sampling optimization,"Make choices about where to sample in the future (e.g., Oyafuso et al. 2021)",,
+Spatial prioritization,"Identify areas for conservation
+(e.g., Stralberg et al. 2018)",,
+Spatial prioritization,Identify essential species habitats (Karp et al. 2025),,
+Spatial prioritization,Identify areas where species are at most risk (Proctor et al. 2022),,
+Spatial prioritization,Identify areas for forest management,,
+Spatial prioritization,Identify biodiversity hotspots,,
+Habitat evaluation,Quantify the ability of landscape to support existing populations (Frans et al. 2017),,
+Habitat evaluation,"Population decline in landscape (e.g., Betts et al. 2022)",,
+Habitat evaluation,"Population viability (e.g., Lee-Yaw et al. 2021)",,
+Habitat evaluation,"Sources & sinks (e.g., Şen et al. 2024)",,
+Habitat evaluation,Enhance understanding of species habitat relationship,,
+Protected areas evaluation,SDMs can be used to evaluate whether protected areas are effectively protecting species and their habitats.,,
+Restoration,Identify areas for habitat restoration purposes,,
+Biological invasions,Identify areas of current and potential distribution of exotic species (Nguyen & Leung 2022),,
+Biological invasions,"Prioritize exotic species for management intervention 
+(e.g., Lozano et al. 2024)",,
+Biological invasions,Cost-effective surveillance for invasive species management (Hauser & McCarthy 2009),,
+Species stock assessments,"(e.g., Karp et al. 2025)",,
+Aligning species management and economic activities,"Aligning scales of management, species movement, and fisheries (e.g.,Hazen et al. 2018)",,
+Translocation,"(e.g., Barlow et al. 2021)",,
+Wildlife monitoring,"Track variation in the Area Of Occupancy (AOO)
+(Kass et al. 2020)",,
+Scenario assessment,"Make predictions on how species distributions/abundances may change as a response to climatic change (CC; e.g., Piirainen et al. 2023)",,
+Scenario assessment,"Make predictions on how species distributions/abundances may change as a response of land cover and land use change (LCLUC)
+(Sohl 2014)",,
+Scenario assessment,"Make predictions on how species distributions/abundances may change as a response of both CC and LCLUC (e.g., Bouderbala et al. 2023, Labadie et al. 2025)",,
+Support the calculation of biodiversity metrics,"Species Habitat Index (SHI, Map of Life)",,
+Support the calculation of biodiversity metrics,"Species Protection Index (SPI, Map of Life)",,
+Testing aspects of SDMs,"SDMs transferability (capacity of the model predict, using new data from other regions and/or periods of time).
+(e.g., Werkoska et al. 2016, Liu et al. 2022)",,
+Testing aspects of SDMs,"Niche truncation (i.e., it implies an incomplete representation of species' ecological niche that underestimates the environmental conditions in which the species could exist” Goicolea et al. 2024).",,
+Testing aspects of SDMs,"Effect of data sets uncertainty on SDMs performance.
+(e.g., Fernández et al. 2013)",,
+Testing aspects of SDMs,Asses the predictive accuracy of SDMs through time (Lazagabaster et al. 2024),,
+Testing aspects of SDMs,Evaluate the “uncertainty in SDM predictions arising from the standard procedures applied for LULC mapping” (Cánibe et al. 2022),,

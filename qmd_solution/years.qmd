@@ -1,0 +1,185 @@
+---
+title: "Years"
+format: html
+editor: visual
+---
+
+```{r}
+# Install required packages if you haven't already
+# install.packages("shiny")
+
+library(shiny)
+
+# --- Define the range of available years ---
+current_year <- as.numeric(format(Sys.Date(), "%Y"))
+available_years <- 1900:current_year
+# Define a range for future years (e.g., current year to 20 years in the future)
+future_years_range <- (current_year + 1):(current_year + 20)
+# Combine all possible years for the choices in both dropdowns
+all_possible_years <- sort(unique(c(available_years, future_years_range)))
+
+
+# --- User Interface (UI) ---
+ui <- fluidPage(
+  # Application title
+  titlePanel("Select a single year (e.g., `1980`) or two years to represent a range (e.g.,`1970` `1995`) and then submit."),
+
+  # Sidebar with dropdowns for year selection and a Record button
+  sidebarLayout(
+    sidebarPanel(
+      # Dropdown for historical/current years
+      selectInput(
+        inputId = "selected_years_past",
+        label = "Select Past/Current Year(s):",
+        choices = available_years,
+        selected = NULL, # Default selection for demonstration
+        multiple = TRUE, # Allow multiple selections
+        selectize = TRUE # Enable search and better selection UI
+      ),
+      # Dropdown for future years
+      selectInput(
+        inputId = "selected_years_future",
+        label = "Select Future Year(s):",
+        choices = future_years_range,
+        selected = NULL, # Default selection for demonstration
+        multiple = TRUE, # Allow multiple selections
+        selectize = TRUE # Enable search and better selection UI
+      ),
+      # Add the "Record Selection" button back
+      actionButton(
+        inputId = "record_selection_btn",
+        label = "Record Selection"
+      )
+    ),
+
+    # Main panel for displaying both current and historical outputs
+    mainPanel(
+      # Current Selection Display
+      h3("Current Selection:"),
+      tableOutput("current_overall_range_table"), # Table for current overall range
+      hr(), # Horizontal rule to separate current from history
+
+      # History of Overall Ranges displayed in a simple table
+      h3("Recorded selection:"),
+      tableOutput("selection_history_table") # Table for history
+    )
+  )
+)
+
+# --- Server Logic ---
+server <- function(input, output, session) { # 'session' is needed for notifications
+
+  # Reactive value to store the history of overall ranges as a data frame
+  overall_range_history_df <- reactiveVal(
+    data.frame(
+      SelectedYearsRaw = character(0), # Internal: Stores raw selected years for duplicate check
+      OverallRange = character(0),
+      stringsAsFactors = FALSE
+    )
+  )
+
+  # Reactive expression for the OVERALL minimum and maximum of CURRENT selected years
+  current_overall_range_string <- reactive({
+    # Get selections from both dropdowns
+    selected_past_years <- input$selected_years_past
+    selected_future_years <- input$selected_years_future
+
+    # Combine and convert to numeric, handling NULLs
+    all_selected_years <- c(
+      if (!is.null(selected_past_years)) as.numeric(selected_past_years),
+      if (!is.null(selected_future_years)) as.numeric(selected_future_years)
+    )
+
+    if (length(all_selected_years) == 0) {
+      return("No years selected.")
+    } else if (length(all_selected_years) == 1) {
+      return(as.character(all_selected_years)) # Return single year as string
+    } else {
+      min_year <- min(all_selected_years)
+      max_year <- max(all_selected_years)
+      return(paste0(min_year, "-", max_year)) # Return the range string
+    }
+  })
+
+  # Output for the CURRENT overall range display (in a table)
+  output$current_overall_range_table <- renderTable({
+    # Create a single-row, single-column data frame for renderTable
+    data.frame(
+      "Overall Range" = current_overall_range_string(), # Column name and its value
+      stringsAsFactors = FALSE
+    )
+  })
+
+  # --- Observe event for the "Record Current Selection" button click ---
+  # This block now triggers ONLY when the button is pressed.
+  observeEvent(input$record_selection_btn, {
+    # Get currently selected years from both dropdowns (raw input)
+    current_selected_past_years_raw <- input$selected_years_past
+    current_selected_future_years_raw <- input$selected_years_future
+
+    # Combine all selected years for the duplicate check
+    combined_selected_years_raw <- c(
+      current_selected_past_years_raw,
+      current_selected_future_years_raw
+    )
+
+    # Get the current overall range string (e.g., "1990" or "1990-2000")
+    current_range_str <- current_overall_range_string() # This reactive will update based on combined input
+
+    # Only add to history if there's a valid selection
+    if (!is.null(combined_selected_years_raw) &&
+        length(combined_selected_years_raw) > 0 &&
+        current_range_str != "No years selected.") {
+
+      # Convert combined selected years to a sorted string for unique identification
+      sorted_selected_years_str <- paste(sort(as.numeric(combined_selected_years_raw)), collapse = ",")
+
+      # Get the current history dataframe
+      current_history_df <- overall_range_history_df()
+
+      # Check if this specific set of selected years is already in the history
+      if (!sorted_selected_years_str %in% current_history_df$SelectedYearsRaw) {
+        # Prepare new row data
+        new_row_data <- data.frame(
+          SelectedYearsRaw = sorted_selected_years_str, # Store raw years string for uniqueness check
+          OverallRange = current_range_str,
+          stringsAsFactors = FALSE
+        )
+
+        # Update the reactive data frame
+        updated_history_df <- rbind(current_history_df, new_row_data)
+        overall_range_history_df(updated_history_df)
+
+        # Show a notification
+        showNotification(paste("Recorded:", current_range_str), type = "message", duration = 2)
+      } else {
+        # Optional: Notify if selection is already recorded
+        showNotification("This selection is already recorded.", type = "warning", duration = 2)
+      }
+    } else {
+      showNotification("Please select at least one year to record.", type = "error", duration = 3)
+    }
+  })
+
+  # Render the history of overall ranges as a simple, static table
+  output$selection_history_table <- renderTable({
+    history_df <- overall_range_history_df()
+
+    if (nrow(history_df) == 0) {
+      # Return an empty data frame with the correct column name if no data yet
+      return(data.frame("Overall Range" = character(0), stringsAsFactors = FALSE))
+    } else {
+      # Select ONLY the 'OverallRange' column for display
+      display_df <- data.frame(
+        "Overall Range" = history_df$OverallRange, # Use the column with the overall range
+        stringsAsFactors = FALSE
+      )
+      return(display_df)
+    }
+  })
+}
+
+# --- Run the application ---
+shinyApp(ui = ui, server = server)
+
+```
