@@ -27,7 +27,7 @@ world_countries <- ne_countries(scale = "medium", returnclass = "sf")
 country_names <- sort(world_countries$name)
 
 # Ecoregions (Dinerstein et al. 2017).
-ecoregions_path <- "./default_data_sets/Ecoregions2017/Ecoregions2017.shp"
+ecoregions_path <- "./datasets_solutions/Ecoregions2017/Ecoregions2017.shp"
 lookup_path <- "prepare_data/country_ecoregion_lookup.rds"
 
 # Initialize resolve_ecoregions and lookup table
