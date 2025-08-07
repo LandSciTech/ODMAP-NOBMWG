@@ -1,0 +1,479 @@
+---
+title: "Upload tables & Figures"
+format: html
+editor: visual
+---
+
+```{r}
+# app.R
+library(shiny)
+library(DT) # For dynamic tables
+library(dplyr) # For data manipulation (specifically select)
+
+ui <- fluidPage(
+  titlePanel("Upload Figures and Tables and describe them"),
+
+  sidebarLayout(
+    sidebarPanel(
+      h4("1. Species"), # Moved to the top
+      fileInput("figure1", "Upload Figure 1 (Species Tab)",
+                multiple = FALSE,
+                accept = c("image/png", "image/jpeg", "image/gif")
+      ),
+      textAreaInput("comment_figure1", "Comment for Figure 1:", ""), # Comment for Figure 1
+      fileInput("figure2", "Upload Figure 2 (Species Tab)",
+                multiple = FALSE,
+                accept = c("image/png", "image/jpeg", "image/gif")
+      ),
+      textAreaInput("comment_figure2", "Comment for Figure 2:", ""), # Comment for Figure 2
+      tags$hr(), # Separator between figures and species data
+      fileInput("species_data_file", "Upload Species-Specific Data (CSV)",
+                multiple = FALSE,
+                accept = c("text/csv",
+                           "text/comma-separated-values,text/plain",
+                           ".csv")),
+      checkboxInput("header_species", "Header (Species CSV)", TRUE),
+      radioButtons("sep_species", "Separator (Species CSV)",
+                   choices = c(Comma = ",",
+                               Semicolon = ";",
+                               Tab = "\t"),
+                   selected = ","),
+      radioButtons("quote_species", "Quote (Species CSV)",
+                   choices = c(None = "",
+                               "Double Quote" = '"',
+                               "Single Quote" = "'"),
+                   selected = '"'),
+      tags$hr(),
+      uiOutput("species_column_selector"), # Dynamic UI for column selection for Species table
+      textAreaInput("comment_species_table", "Comment for Species Table:", ""), # Comment for Species Table
+      tags$hr(),
+
+      h4("2. Predictors"), # Moved to below Species section
+      fileInput("predictor_figure1", "Upload Figure 1 (Predictors Tab)",
+                multiple = FALSE,
+                accept = c("image/png", "image/jpeg", "image/gif")
+      ),
+      textAreaInput("comment_predictor_figure1", "Comment for Predictor Figure 1:", ""), # Comment for Predictor Figure 1
+      fileInput("predictor_figure2", "Upload Figure 2 (Predictors Tab)",
+                multiple = FALSE,
+                accept = c("image/png", "image/jpeg", "image/gif")
+      ),
+      textAreaInput("comment_predictor_figure2", "Comment for Predictor Figure 2:", ""), # Comment for Predictor Figure 2
+      tags$hr(), # Separator between figures and main CSV data
+      fileInput("file1", "Choose Main CSV File",
+                multiple = FALSE,
+                accept = c("text/csv",
+                           "text/comma-separated-values,text/plain",
+                           ".csv")),
+      tags$hr(),
+      checkboxInput("header_main", "Header (Main CSV)", TRUE),
+      radioButtons("sep_main", "Separator (Main CSV)",
+                   choices = c(Comma = ",",
+                               Semicolon = ";",
+                               Tab = "\t"),
+                   selected = ","),
+      radioButtons("quote_main", "Quote (Main CSV)",
+                   choices = c(None = "",
+                               "Double Quote" = '"',
+                               "Single Quote" = "'"),
+                   selected = '"'),
+      tags$hr(),
+      uiOutput("predictors_column_selector"), # Dynamic UI for column selection for Predictors tab
+      textAreaInput("comment_predictors_table", "Comment for Predictors Table:", ""), # Comment for Predictors Table
+      tags$hr(),
+
+      h4("3. Model"), # New section for Model tab inputs
+      fileInput("model_figure1", "Upload Figure 1 (Model Tab)",
+                multiple = FALSE,
+                accept = c("image/png", "image/jpeg", "image/gif")
+      ),
+      textAreaInput("comment_model_figure1", "Comment for Model Figure 1:", ""),
+      fileInput("model_figure2", "Upload Figure 2 (Model Tab)",
+                multiple = FALSE,
+                accept = c("image/png", "image/jpeg", "image/gif")
+      ),
+      textAreaInput("comment_model_figure2", "Comment for Model Figure 2:", ""),
+      tags$hr(),
+      fileInput("model_data_file", "Upload Model Data (CSV)",
+                multiple = FALSE,
+                accept = c("text/csv",
+                           "text/comma-separated-values,text/plain",
+                           ".csv")),
+      checkboxInput("header_model", "Header (Model CSV)", TRUE),
+      radioButtons("sep_model", "Separator (Model CSV)",
+                   choices = c(Comma = ",",
+                               Semicolon = ";",
+                               Tab = "\t"),
+                   selected = ","),
+      radioButtons("quote_model", "Quote (Model CSV)",
+                   choices = c(None = "",
+                               "Double Quote" = '"',
+                               "Single Quote" = "'"),
+                   selected = '"'),
+      tags$hr(),
+      uiOutput("model_column_selector"), # Dynamic UI for column selection for Model table
+      textAreaInput("comment_model_table", "Comment for Model Table:", "") # Comment for Model Table
+    ),
+
+    mainPanel(
+      tabsetPanel(
+        id = "data_tabs", # Give an ID to the tabsetPanel
+        tabPanel("Species", # Species tab is first
+                 h4("Species Figures"),
+                 fluidRow(
+                   column(6,
+                          htmlOutput("display_comment_figure1"), # Use htmlOutput for styling
+                          imageOutput("plot1_output") # Placeholder for the first figure
+                   ),
+                   column(6,
+                          htmlOutput("display_comment_figure2"), # Use htmlOutput for styling
+                          imageOutput("plot2_output") # Placeholder for the second figure
+                   )
+                 ),
+                 tags$hr(),
+                 h4("Species Data Table"),
+                 htmlOutput("display_comment_species_table"), # Use htmlOutput for styling
+                 DTOutput("species_specific_table") # Table for species-specific data
+        ),
+        tabPanel("Predictors",
+                 h4("Predictor Figures"), # New heading for predictor figures
+                 fluidRow(
+                   column(6,
+                          htmlOutput("display_comment_predictor_figure1"), # Use htmlOutput for styling
+                          imageOutput("predictor_plot1_output") # Placeholder for first predictor figure
+                   ),
+                   column(6,
+                          htmlOutput("display_comment_predictor_figure2"), # Use htmlOutput for styling
+                          imageOutput("predictor_plot2_output") # Placeholder for second predictor figure
+                   )
+                 ),
+                 tags$hr(),
+                 h4("Predictor Data Table"), # Heading for predictor data table
+                 htmlOutput("display_comment_predictors_table"), # Use htmlOutput for styling
+                 DTOutput("predictors_table")
+        ),
+        tabPanel("Model", # New Model tab
+                 h4("Model Figures"),
+                 fluidRow(
+                   column(6,
+                          htmlOutput("display_comment_model_figure1"), # Comment for Model Figure 1
+                          imageOutput("model_plot1_output") # Placeholder for first model figure
+                   ),
+                   column(6,
+                          htmlOutput("display_comment_model_figure2"), # Comment for Model Figure 2
+                          imageOutput("model_plot2_output") # Placeholder for second model figure
+                   )
+                 ),
+                 tags$hr(),
+                 h4("Model Data Table"),
+                 htmlOutput("display_comment_model_table"), # Comment for Model Table
+                 DTOutput("model_table") # Table for model data
+        )
+      )
+    )
+  )
+)
+
+server <- function(input, output) {
+
+  # Reactive expression to read the main uploaded CSV data (for Predictors tab)
+  data_csv <- reactive({
+    req(input$file1) # Ensures the app waits until a file is uploaded
+
+    df <- read.csv(input$file1$datapath,
+                   header = input$header_main,
+                   sep = input$sep_main,
+                   quote = input$quote_main)
+    return(df)
+  })
+
+  # Dynamic UI for column selection (for Predictors tab)
+  output$predictors_column_selector <- renderUI({
+    df <- data_csv()
+    if (is.null(df)) {
+      return(NULL) # Don't show anything if no main CSV file is uploaded yet
+    }
+
+    checkboxGroupInput(
+      "selected_predictors_columns",
+      "Select Predictor Columns:",
+      choices = names(df),
+      selected = names(df) # All columns are selected by default
+    )
+  })
+
+  # Render the dynamic table for the "Predictors" tab
+  output$predictors_table <- renderDT({
+    df <- data_csv()
+    req(input$selected_predictors_columns) # Ensures columns are selected
+
+    # Subset the data frame to include only the selected columns
+    df_filtered <- df %>%
+      select(input$selected_predictors_columns)
+
+    datatable(df_filtered)
+  })
+
+  # ---
+
+  ## Species Tab Functionality
+
+  ### Figure Uploads
+
+  # Render the first uploaded figure for Species tab
+  output$plot1_output <- renderImage({
+    req(input$figure1) # Ensure a file is uploaded
+
+    list(src = input$figure1$datapath,
+         alt = "Uploaded Figure 1 (Species Tab)",
+         width = "100%", # Make it responsive
+         style = "max-width: 400px; height: auto;")
+  }, deleteFile = FALSE)
+
+  # Render the second uploaded figure for Species tab
+  output$plot2_output <- renderImage({
+    req(input$figure2) # Ensure a file is uploaded
+
+    list(src = input$figure2$datapath,
+         alt = "Uploaded Figure 2 (Species Tab)",
+         width = "100%",
+         style = "max-width: 400px; height: auto;")
+  }, deleteFile = FALSE)
+
+  # Display comment for Figure 1 (Species Tab) - Highlighted
+  output$display_comment_figure1 <- renderText({
+    if (!is.null(input$comment_figure1) && input$comment_figure1 != "") {
+      # Use HTML for highlighting
+      paste0("<span style='background-color: #FFFFCC; padding: 3px;'><b>Comment:</b> ",
+             htmlspecialchars(input$comment_figure1), "</span>")
+    } else {
+      ""
+    }
+  })
+
+  # Display comment for Figure 2 (Species Tab) - Highlighted
+  output$display_comment_figure2 <- renderText({
+    if (!is.null(input$comment_figure2) && input$comment_figure2 != "") {
+      # Use HTML for highlighting
+      paste0("<span style='background-color: #FFFFCC; padding: 3px;'><b>Comment:</b> ",
+             htmlspecialchars(input$comment_figure2), "</span>")
+    } else {
+      ""
+    }
+  })
+
+  ### Species-Specific Data Table and Column Selection
+
+  # Reactive expression to read the species-specific CSV data
+  species_data_csv <- reactive({
+    req(input$species_data_file) # Ensures the app waits until a file is uploaded
+
+    df_species <- read.csv(input$species_data_file$datapath,
+                           header = input$header_species,
+                           sep = input$sep_species,
+                           quote = input$quote_species)
+    return(df_species)
+  })
+
+  # Dynamic UI for column selection (for Species table)
+  output$species_column_selector <- renderUI({
+    df_species <- species_data_csv()
+    if (is.null(df_species)) {
+      return(NULL) # Don't show anything if no species CSV file is uploaded yet
+    }
+
+    checkboxGroupInput(
+      "selected_species_columns",
+      "Select Species Data Columns:",
+      choices = names(df_species),
+      selected = names(df_species) # All columns are selected by default
+    )
+  })
+
+  # Render the dynamic table for species-specific data
+  output$species_specific_table <- renderDT({
+    df_species <- species_data_csv()
+    req(input$selected_species_columns) # Ensures columns are selected
+
+    # Subset the species data frame to include only the selected columns
+    df_species_filtered <- df_species %>%
+      select(input$selected_species_columns)
+
+    datatable(df_species_filtered)
+  })
+
+  # Display comment for Species Table - Highlighted
+  output$display_comment_species_table <- renderText({
+    if (!is.null(input$comment_species_table) && input$comment_species_table != "") {
+      # Use HTML for highlighting
+      paste0("<span style='background-color: #FFFFCC; padding: 3px;'><b>Comment:</b> ",
+             htmlspecialchars(input$comment_species_table), "</span>")
+    } else {
+      ""
+    }
+  })
+
+  ## Predictors Tab Figure Functionality
+
+  # Render the first uploaded figure for Predictors tab
+  output$predictor_plot1_output <- renderImage({
+    req(input$predictor_figure1) # Ensure a file is uploaded
+
+    list(src = input$predictor_figure1$datapath,
+         alt = "Uploaded Predictor Figure 1",
+         width = "100%",
+         style = "max-width: 400px; height: auto;")
+  }, deleteFile = FALSE)
+
+  # Render the second uploaded figure for Predictors tab
+  output$predictor_plot2_output <- renderImage({
+    req(input$predictor_figure2) # Ensure a file is uploaded
+
+    list(src = input$predictor_figure2$datapath,
+         alt = "Uploaded Predictor Figure 2",
+         width = "100%",
+         style = "max-width: 400px; height: auto;")
+  }, deleteFile = FALSE)
+
+  # Display comment for Predictor Figure 1 - Highlighted
+  output$display_comment_predictor_figure1 <- renderText({
+    if (!is.null(input$comment_predictor_figure1) && input$comment_predictor_figure1 != "") {
+      # Use HTML for highlighting
+      paste0("<span style='background-color: #FFFFCC; padding: 3px;'><b>Comment:</b> ",
+             htmlspecialchars(input$comment_predictor_figure1), "</span>")
+    } else {
+      ""
+    }
+  })
+
+  # Display comment for Predictor Figure 2 - Highlighted
+  output$display_comment_predictor_figure2 <- renderText({
+    if (!is.null(input$comment_predictor_figure2) && input$comment_predictor_figure2 != "") {
+      # Use HTML for highlighting
+      paste0("<span style='background-color: #FFFFCC; padding: 3px;'><b>Comment:</b> ",
+             htmlspecialchars(input$comment_predictor_figure2), "</span>")
+    } else {
+      ""
+    }
+  })
+
+  # Display comment for Predictors Table - Highlighted
+  output$display_comment_predictors_table <- renderText({
+    if (!is.null(input$comment_predictors_table) && input$comment_predictors_table != "") {
+      # Use HTML for highlighting
+      paste0("<span style='background-color: #FFFFCC; padding: 3px;'><b>Comment:</b> ",
+             htmlspecialchars(input$comment_predictors_table), "</span>")
+    } else {
+      ""
+    }
+  })
+
+  ## Model Tab Functionality (NEW)
+
+  ### Figure Uploads for Model Tab
+
+  # Render the first uploaded figure for Model tab
+  output$model_plot1_output <- renderImage({
+    req(input$model_figure1) # Ensure a file is uploaded
+
+    list(src = input$model_figure1$datapath,
+         alt = "Uploaded Model Figure 1",
+         width = "100%",
+         style = "max-width: 400px; height: auto;")
+  }, deleteFile = FALSE)
+
+  # Render the second uploaded figure for Model tab
+  output$model_plot2_output <- renderImage({
+    req(input$model_figure2) # Ensure a file is uploaded
+
+    list(src = input$model_figure2$datapath,
+         alt = "Uploaded Model Figure 2",
+         width = "100%",
+         style = "max-width: 400px; height: auto;")
+  }, deleteFile = FALSE)
+
+  # Display comment for Model Figure 1 - Highlighted
+  output$display_comment_model_figure1 <- renderText({
+    if (!is.null(input$comment_model_figure1) && input$comment_model_figure1 != "") {
+      paste0("<span style='background-color: #FFFFCC; padding: 3px;'><b>Comment:</b> ",
+             htmlspecialchars(input$comment_model_figure1), "</span>")
+    } else {
+      ""
+    }
+  })
+
+  # Display comment for Model Figure 2 - Highlighted
+  output$display_comment_model_figure2 <- renderText({
+    if (!is.null(input$comment_model_figure2) && input$comment_model_figure2 != "") {
+      paste0("<span style='background-color: #FFFFCC; padding: 3px;'><b>Comment:</b> ",
+             htmlspecialchars(input$comment_model_figure2), "</span>")
+    } else {
+      ""
+    }
+  })
+
+  ### Model Data Table and Column Selection
+
+  # Reactive expression to read the model CSV data
+  model_data_csv <- reactive({
+    req(input$model_data_file) # Ensures the app waits until a file is uploaded
+
+    df_model <- read.csv(input$model_data_file$datapath,
+                         header = input$header_model,
+                         sep = input$sep_model,
+                         quote = input$quote_model)
+    return(df_model)
+  })
+
+  # Dynamic UI for column selection (for Model table)
+  output$model_column_selector <- renderUI({
+    df_model <- model_data_csv()
+    if (is.null(df_model)) {
+      return(NULL) # Don't show anything if no model CSV file is uploaded yet
+    }
+
+    checkboxGroupInput(
+      "selected_model_columns",
+      "Select Model Data Columns:",
+      choices = names(df_model),
+      selected = names(df_model) # All columns are selected by default
+    )
+  })
+
+  # Render the dynamic table for model data
+  output$model_table <- renderDT({
+    df_model <- model_data_csv()
+    req(input$selected_model_columns) # Ensures columns are selected
+
+    # Subset the model data frame to include only the selected columns
+    df_model_filtered <- df_model %>%
+      select(input$selected_model_columns)
+
+    datatable(df_model_filtered)
+  })
+
+  # Display comment for Model Table - Highlighted
+  output$display_comment_model_table <- renderText({
+    if (!is.null(input$comment_model_table) && input$comment_model_table != "") {
+      paste0("<span style='background-color: #FFFFCC; padding: 3px;'><b>Comment:</b> ",
+             htmlspecialchars(input$comment_model_table), "</span>")
+    } else {
+      ""
+    }
+  })
+
+  # Helper function to escape HTML special characters
+  # This prevents issues if users enter HTML-like characters in their comments
+  htmlspecialchars <- function(text) {
+    text <- gsub("&", "&amp;", text)
+    text <- gsub("<", "&lt;", text)
+    text <- gsub(">", "&gt;", text)
+    text <- gsub('"', "&quot;", text)
+    text <- gsub("'", "&#039;", text)
+    return(text)
+  }
+
+}
+
+shinyApp(ui = ui, server = server)
+```
