@@ -7,12 +7,10 @@ library(DT)
 library(tidyverse)
 library(rangeModelMetadata)
 
-odmap_dict = read.csv("www/odmap_dict.csv", header = T, stringsAsFactors = F)
-glossary = read.csv("www/glossary.csv", header = T, stringsAsFactors = F)
-rmm_dict = rmmDataDictionary()
-#rmmSuggest('model$partition$partitionSet')
-
 server <- function(input, output, session) {
+  odmap_dict = read.csv("www/odmap_dict.csv", header = T, stringsAsFactors = F)
+  glossary = read.csv("www/glossary.csv", header = T, stringsAsFactors = F)
+  rmm_dict = rmmDataDictionary()
   # ------------------------------------------------------------------------------------------#
   #                           Rendering functions for UI elements                             #
   # ------------------------------------------------------------------------------------------#
