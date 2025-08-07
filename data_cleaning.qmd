@@ -11,7 +11,7 @@ library(dplyr) # For data manipulation
 # --- Data Structure ---
 # Define your main items and their corresponding sub-items
 # Added "Desserts" with no sub-items to demonstrate the "no sub-items" message
-main_items_data <- read.csv("./www/data_cleaning.csv")
+main_items_data <- read.csv("./datasets_solutions/data_cleaning.csv")
 
 # --- UI (User Interface) ---
 ui <- fluidPage(

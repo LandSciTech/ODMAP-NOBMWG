@@ -15,7 +15,7 @@ library(shinyjs) # For delayed messages
 # ---
 # Read the CSV file
 data_packages <- tryCatch({
-  read.csv("C:/ODMAP-NOBMWG/www/Modelling_SDMs_Packages.csv", stringsAsFactors = FALSE)
+  read.csv("./datasets_solutions/Modelling_SDMs_Packages.csv", stringsAsFactors = FALSE)
 }, error = function(e) {
   warning(paste("Could not read CSV file:", e$message))
   data.frame(

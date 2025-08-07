@@ -1,0 +1,8 @@
+Taxonomic cleaning,Spatial cleaning,Temporal cleaning
+Resolved misidentifications,Removed duplicates,Removed records outside the temporal analysis window
+Resolved misspelling,Removed outliers (outside study area/bounding box),Removed records with zero values or NA
+Reconciled synonymy ,Removed low precision coordinates,
+,Swapped latitude and longitude,
+,Removed records without coordinates,
+,Removed records with zero values,
+,Removed older records,

@@ -20,7 +20,7 @@ library(sf)
 # within your Shiny app's directory (e.g., "www/bcr_NA.csv") for portability.
 # The following code for BCRs_df is taken directly from your input.
 # If 'bcr_NA.csv' is not found or does not contain expected columns, this part might need adjustment.
-BCRs_df <- read.csv("./www/bcr_NA.csv", header=TRUE, sep=",") %>%
+BCRs_df <- read.csv("./datasets_solutions/bcr_NA.csv", header=TRUE, sep=",") %>%
   dplyr::select(2:3) %>% # Selects the 2nd and 3rd columns as per your instruction
   dplyr::distinct() %>% # Gets unique values
   na.omit() # Removes any NA values
@@ -44,7 +44,7 @@ Canada_df <- data.frame(Unit_Name = canadian_provinces_territories) %>%
 Canada_df["Management_unit_Type"] <- "Provinces_Territories"
 
 # 3. Ecoregions (from Diverstein 2017. https://ecoregions.appspot.com/)
-ecoregions <- sf::st_read("./default_data_sets/Ecoregions2017/Ecoregions2017.shp")%>%
+ecoregions <- sf::st_read("./datasets_solutions/Ecoregions2017/Ecoregions2017.shp")%>%
   sf::st_drop_geometry()%>%
   dplyr::select(2)%>%
   dplyr::rename(Unit_Name = ECO_NAME)%>%

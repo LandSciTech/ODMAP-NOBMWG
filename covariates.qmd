@@ -1,5 +1,5 @@
 ---
-title: "predicotrs"
+title: "Predictors (covariates"
 format: html
 editor: visual
 ---
@@ -15,8 +15,8 @@ library(purrr)
 # Ensure the file path is correct and accessible
 # Using a dummy data frame for demonstration if the file path is not readily available
 # In a real application, make sure "C:/ODMAP-NOBMWG/www/Covariates_BAM.csv" exists and is accessible.
-if (file.exists("C:/ODMAP-NOBMWG/www/Covariates_BAM.csv")) {
-  data_covariates <- read.csv("C:/ODMAP-NOBMWG/www/Covariates_BAM.csv") %>%
+if (file.exists("./datasets_solutions/Covariates_BAM.csv")) {
+  data_covariates <- read.csv("./datasets_solutions/Covariates_BAM.csv") %>%
     dplyr::select(category, definition, source, resolution)
 } else {
   # Create dummy data if the file is not found

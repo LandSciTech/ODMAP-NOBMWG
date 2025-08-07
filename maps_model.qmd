@@ -1,0 +1,1205 @@
+---
+title: "Spatial data from models (rasters, shapefiles)"
+format: html
+editor: visual
+---
+
+```{r}
+
+library(shiny)
+library(leaflet)
+library(sf)
+library(rnaturalearth) # For country data
+library(rnaturalearthdata) # For country data
+library(raster) # For handling raster data
+library(viridisLite) # For viridis, magma, etc. palettes directly
+library(shinycssloaders) # For loading indicators
+library(htmltools) # For tags$img and other HTML elements
+library(base64enc) # For base64 encoding of images
+library(RColorBrewer) # Essential for RColorBrewer palettes like "PRGn"
+library(readr) # For reading CSV files (still included, though not directly used for points now)
+
+# --- Data Preparation (runs once when the app starts) ---
+# Get world country boundaries data
+world_countries <- ne_countries(scale = "medium", returnclass = "sf")
+
+# Get a list of country names for the dropdown
+country_names <- sort(world_countries$name)
+
+# Ecoregions (Dinerstein et al. 2017).
+ecoregions_path <- "./default_data_sets/Ecoregions2017/Ecoregions2017.shp"
+lookup_path <- "prepare_data/country_ecoregion_lookup.rds"
+
+# Initialize resolve_ecoregions and lookup table
+resolve_ecoregions <- NULL
+country_ecoregion_lookup <- NULL
+
+# Check if the shapefile exists before attempting to read it
+if (file.exists(ecoregions_path)) {
+  resolve_ecoregions <- st_read(ecoregions_path, quiet = TRUE)
+  if (st_crs(resolve_ecoregions)$epsg != 4326) {
+    resolve_ecoregions <- st_transform(resolve_ecoregions, 4326)
+  }
+  # Ensure the ECO_NAME column exists for filtering later
+  if (!("ECO_NAME" %in% names(resolve_ecoregions))) {
+    warning("Column 'ECO_NAME' not found in Ecoregions shapefile. Filtering by ecoregion will not work.")
+    resolve_ecoregions <- NULL # Set to NULL if critical column is missing
+  }
+} else {
+  warning("RESOLVE Ecoregions shapefile not found at ", ecoregions_path,
+          ". Ecoregion functionality will be limited.")
+}
+
+# Load the pre-calculated lookup table
+if (file.exists(lookup_path)) {
+  country_ecoregion_lookup <- readRDS(lookup_path)
+} else {
+  warning("Country-ecoregion lookup table not found at ", lookup_path,
+          ". Please run 'prepare_data.R' first.")
+}
+
+# --- User Interface (UI) ---
+ui <- fluidPage(
+  titlePanel("Add model materials input and outputs (rasters, shapes, etc.)."),
+
+  # Add custom CSS for the sidebar scrollbar
+  tags$head(
+    tags$style(HTML("
+      .sidebar {
+        height: calc(100vh - 80px); /* Adjust height as needed, 80px is for title/padding */
+        overflow-y: auto;
+      }
+    "))
+  ),
+
+  sidebarLayout(
+    sidebarPanel(
+      class = "sidebar", # Add a class to the sidebarPanel for CSS targeting
+      h3("1. Location/Area of analysis/Extent"),
+
+      selectInput(
+        inputId = "selected_country",
+        label = "Select a Country:",
+        choices = c("World (Global View)", country_names), # Add a global view option
+        selected = "World (Global View)"
+      ),
+
+      # --- Bounding Box Group (Regrouped for space) ---
+      wellPanel( # Grouping bounding box inputs
+        h4("Add Custom Bounding Box Polygon"),
+        fluidRow( # Put Xmin/Xmax on one line
+          column(6, numericInput("xmin", "X Min (Lon):", value = -136, step = 0.1)),
+          column(6, numericInput("xmax", "X Max (Lon):", value = -60, step = 0.1))
+        ),
+        fluidRow( # Put Ymin/Ymax on one line
+          column(6, numericInput("ymin", "Y Min (Lat)::", value = 50, step = 0.1)),
+          column(6, numericInput("ymax", "Y Max (Lat)::", value = 70, step = 0.1))
+        ),
+        actionButton("add_bbox_polygon", "Add Bounding Box Polygon")
+      ),
+
+      # --- Raster Boundary Upload Section ---
+      wellPanel(
+        h4("Add Raster Boundary Polygon"),
+        fileInput("raster_boundary_upload", "Choose Raster to Extract Boundary (e.g., .tif, .asc)",
+                  accept = c(".tif", ".tiff", ".asc", ".grd", ".nc", ".img")),
+        actionButton("add_raster_boundary", "Add Raster Boundary as Polygon")
+      ),
+      tags$hr(),
+      h3("2. Management Units (e.g., Jurisdictions, Ecoregions, etc.)"),
+
+      # Ecoregion dropdown will be dynamically rendered here
+      uiOutput("ecoregion_select_ui"),
+      tags$hr(), # Horizontal rule for separation
+
+      h3("3. Species data (e.g., Occurrences, density sampling, etc.)"),
+      # Shapefile Input for Detected Point Data
+      fileInput("point_shapefile_upload", "Upload Detected Data (Shapefile: .shp, .shx, .dbf, .prj)",
+                multiple = TRUE,
+                accept = c(".shp", ".dbf", ".sbn", ".sbx", ".shx", ".prj", ".cpg")),
+      checkboxInput("show_points", "Show Detected Points", value = FALSE),
+
+      # NEW: Shapefile Input for Undetected Point Data
+      fileInput("undetected_point_shapefile_upload", "Upload Undetected Data (Shapefile: .shp, .shx, .dbf, .prj)",
+                multiple = TRUE,
+                accept = c(".shp", ".dbf", ".sbn", ".sbx", ".shx", ".prj", ".cpg")),
+      checkboxInput("show_undetected_points", "Show Undetected Points", value = FALSE),
+
+      # NEW: Detected Density Raster Input
+      h4("Detected Density Raster"), # Add a subheading for clarity
+      fileInput("detected_density_upload", "Upload Detected Density Raster (e.g., .tif, .asc)",
+                accept = c(".tif", ".tiff", ".asc", ".grd", ".nc", ".img")),
+      checkboxInput("show_detected_density", "Show Detected Density", value = FALSE),
+      withSpinner(uiOutput("detected_density_options_ui"), type = 6, color = "#0dc5c7"), # Dedicated UI for options
+      tags$hr(), # Horizontal rule for separation
+
+      h3("4. Predictions"),
+
+      # --- Raster Upload Section ---
+
+      fileInput("predictions_upload", "Choose Predictions Raster (e.g., .tif, .asc)",
+                accept = c(".tif", ".tiff", ".asc", ".grd", ".nc", ".img")),
+      checkboxInput("show_predictions", "Show Predictions", value = FALSE),
+      withSpinner(uiOutput("predictions_options_ui"), type = 6, color = "#0dc5c7"), # Dedicated UI for predictions
+      tags$hr(),
+
+      h3("5. Uncertainty"),
+
+      h4("Uncertainty Raster"),
+      fileInput("uncertainty_upload", "Choose Uncertainty Raster (e.g., .tif, .asc)",
+                accept = c(".tif", ".tiff", ".asc", ".grd", ".nc", ".img")),
+      checkboxInput("show_uncertainty", "Show Uncertainty", value = FALSE),
+      withSpinner(uiOutput("uncertainty_options_ui"), type = 6, color = "#0dc5c7"), # Dedicated UI for uncertainty
+      tags$hr(),
+
+      h4("Extrapolation Raster"),
+      fileInput("extrapolation_upload", "Choose Extrapolation Raster (e.g., .tif, .asc)",
+                accept = c(".tif", ".tiff", ".asc", ".grd", ".nc", ".img")),
+      checkboxInput("show_extrapolation", "Show Extrapolation", value = FALSE),
+      withSpinner(uiOutput("extrapolation_options_ui"), type = 6, color = "#0dc5c7"), # Dedicated UI for extrapolation
+      tags$hr(),
+
+      # NEW: Bivariate Predictions Uncertainty Raster Section
+      h4("Bivariate Predictions Uncertainty Raster"),
+      fileInput("bivariate_predictions_uncertainty_upload", "Choose Bivariate Raster (e.g., .tif, .asc)",
+                accept = c(".tif", ".tiff", ".asc", ".grd", ".nc", ".img")),
+      checkboxInput("show_bivariate_predictions_uncertainty", "Show Bivariate Predictions & Uncertainty", value = FALSE),
+      wellPanel( # Add a panel for the legend image input
+        h5("Bivariate Legend Image (.png)"),
+        fileInput("bivariate_legend_upload", "Upload Bivariate Legend Image",
+                  accept = ".png"),
+        # Optional: Display a preview of the uploaded legend
+        uiOutput("bivariate_legend_preview_ui")
+      ),
+      withSpinner(uiOutput("bivariate_predictions_uncertainty_options_ui"), type = 6, color = "#0dc5c7") # Dedicated UI for bivariate
+    ),
+    mainPanel(
+      leafletOutput("country_map", height = "600px")
+    )
+  )
+)
+
+# --- Server Logic ---
+server <- function(input, output, session) {
+
+  # Reactive expression for the currently selected country's geometry
+  filtered_country_data <- reactive({
+    if (input$selected_country == "World (Global View)") {
+      return(world_countries)
+    } else {
+      world_countries[world_countries$name == input$selected_country, ]
+    }
+  })
+
+  # Reactive expression to get ecoregion names that intersect with the current country
+  # This now uses the pre-calculated lookup table for efficiency
+  intersecting_ecoregion_names <- reactive({
+    req(country_ecoregion_lookup) # Ensure lookup table is loaded
+
+    country_key <- input$selected_country
+    if (country_key %in% names(country_ecoregion_lookup)) {
+      return(country_ecoregion_lookup[[country_key]])
+    } else {
+      return(character(0)) # Return empty character vector if no data found
+    }
+  })
+
+  # Dynamically render the ecoregion select input based on intersecting ecoregion names
+  output$ecoregion_select_ui <- renderUI({
+    ecoregion_choices <- sort(intersecting_ecoregion_names())
+    selectInput(
+      inputId = "selected_ecoregions", # Changed ID to plural
+      label = "Select Ecoregion(s):",
+      choices = ecoregion_choices,
+      selected = NULL, # Default to no selection for multiple select
+      multiple = TRUE # Allow multiple selections
+    )
+  })
+
+  # Reactive expression for the *multiple* ecoregion polygons to display
+  selected_ecoregions_to_display <- reactive({
+    req(input$selected_ecoregions, resolve_ecoregions) # Ensure dropdown and ecoregions data are ready
+
+    if (!is.null(input$selected_ecoregions) && length(input$selected_ecoregions) > 0) {
+      return(resolve_ecoregions[resolve_ecoregions$ECO_NAME %in% input$selected_ecoregions, ])
+    } else {
+      return(NULL)
+    }
+  })
+
+  # --- Generic Raster Loading Function ---
+  load_and_process_raster <- function(file_input, raster_type_name) {
+    req(file_input)
+
+    file_path <- file_input$datapath
+    raster_name <- file_input$name
+
+    withProgress(message = paste("Loading", raster_type_name, "Raster:", raster_name), value = 0, {
+      incProgress(0.1, detail = "Reading file...")
+      ras <- NULL
+
+      tryCatch({
+        ras <- raster(file_path)
+        incProgress(0.4, detail = "Checking projection...")
+
+        target_crs <- CRS("+proj=longlat +datum=WGS84 +no_defs")
+
+        current_crs_obj <- tryCatch({
+          st_crs(crs(ras)) # Attempt to get sf CRS object from raster's CRS
+        }, error = function(e) {
+          warning("Could not parse raster CRS with st_crs for ", raster_name, " (", raster_type_name, "): ", e$message)
+          NULL
+        })
+
+        needs_reprojection <- FALSE
+
+        if (is.null(current_crs_obj) || is.na(current_crs_obj$IsGeographic) || !current_crs_obj$IsGeographic) {
+          showNotification(paste0("Raster '", raster_name, "' (", raster_type_name, ") CRS is missing, invalid, or not geographic. Attempting to reproject."), type = "warning")
+          needs_reprojection <- TRUE
+        } else if (current_crs_obj$epsg != 4326) {
+          message("Reprojecting uploaded raster '", raster_name, "' (", raster_type_name, ") to WGS84 (EPSG:4326)...")
+          needs_reprojection <- TRUE
+        }
+
+        if (needs_reprojection) {
+          incProgress(0.2, detail = "Reprojecting to WGS84...")
+          ras <- tryCatch({
+            projectRaster(ras, crs = target_crs)
+          }, error = function(e) {
+            showNotification(paste("Error during reprojection of '", raster_name, "' (", raster_type_name, "):", e$message), type = "error", duration = 10)
+            return(NULL)
+          })
+          if (is.null(ras)) return(NULL)
+        }
+
+        incProgress(0.2, detail = "Processing bands...")
+
+        if (nlayers(ras) > 1) {
+          showNotification(
+            paste0("Multi-band raster detected for '", raster_name, "' (", raster_type_name, ", ", nlayers(ras), " bands). Displaying band 1."),
+            type = "info", duration = 5
+          )
+          ras <- ras[[1]]
+        }
+
+        incProgress(0.1, detail = "Done.")
+        return(ras)
+      }, error = function(e) {
+        showNotification(paste("Error loading or processing '", raster_name, "' (", raster_type_name, "):", e$message), type = "error", duration = 10)
+        return(NULL)
+      })
+    })
+  }
+
+  # Reactive for Predictions Raster
+  predictions_raster <- reactive({
+    load_and_process_raster(input$predictions_upload, "Predictions")
+  })
+
+  # Reactive for Uncertainty Raster
+  uncertainty_raster <- reactive({
+    load_and_process_raster(input$uncertainty_upload, "Uncertainty")
+  })
+
+  # Reactive for Extrapolation Raster
+  extrapolation_raster <- reactive({
+    load_and_process_raster(input$extrapolation_upload, "Extrapolation")
+  })
+
+  # NEW: Reactive for Bivariate Predictions Uncertainty Raster
+  bivariate_predictions_uncertainty_raster <- reactive({
+    load_and_process_raster(input$bivariate_predictions_uncertainty_upload, "Bivariate Predictions Uncertainty")
+  })
+
+  # NEW: Reactive for Detected_density Raster
+  detected_density_raster <- reactive({
+    load_and_process_raster(input$detected_density_upload, "Detected Density")
+  })
+
+  # NEW: Reactive for Raster Boundary Upload
+  raster_boundary_data <- eventReactive(input$add_raster_boundary, {
+    req(input$raster_boundary_upload)
+
+    file_path <- input$raster_boundary_upload$datapath
+    raster_name <- input$raster_boundary_upload$name
+
+    withProgress(message = paste("Calculating boundary for:", raster_name), value = 0, {
+      incProgress(0.1, detail = "Loading raster...")
+      ras <- NULL
+      tryCatch({
+        ras <- raster(file_path)
+        incProgress(0.4, detail = "Checking projection and reprojecting if necessary...")
+
+        target_crs <- CRS("+proj=longlat +datum=WGS84 +no_defs")
+
+        current_crs_obj <- tryCatch({
+          st_crs(crs(ras))
+        }, error = function(e) {
+          warning("Could not parse raster CRS with st_crs for ", raster_name, ": ", e$message)
+          NULL
+        })
+
+        needs_reprojection <- FALSE
+        if (is.null(current_crs_obj) || is.na(current_crs_obj$IsGeographic) || !current_crs_obj$IsGeographic) {
+          showNotification(paste0("Raster '", raster_name, "' CRS is missing, invalid, or not geographic. Attempting to reproject."), type = "warning")
+          needs_reprojection <- TRUE
+        } else if (current_crs_obj$epsg != 4326) {
+          message("Reprojecting uploaded raster '", raster_name, "' to WGS84 (EPSG:4326)...")
+          needs_reprojection <- TRUE
+        }
+
+        if (needs_reprojection) {
+          ras <- tryCatch({
+            projectRaster(ras, crs = target_crs)
+          }, error = function(e) {
+            showNotification(paste("Error during reprojection of '", raster_name, "':", e$message), type = "error", duration = 10)
+            return(NULL)
+          })
+          if (is.null(ras)) return(NULL)
+        }
+
+        incProgress(0.3, detail = "Calculating bounding box...")
+        bbox <- as(extent(ras), "SpatialPolygons")
+        proj4string(bbox) <- CRS("+proj=longlat +datum=WGS84 +no_defs") # Ensure CRS is set
+        bbox_sf <- st_as_sf(bbox)
+
+        incProgress(0.2, detail = "Done.")
+        return(bbox_sf)
+      }, error = function(e) {
+        showNotification(paste("Error loading or processing raster for boundary:", e$message), type = "error", duration = 10)
+        return(NULL)
+      })
+    })
+  })
+
+
+  # --- REVISED: Generic Raster Color Palette and Domain Function ---
+  # This function now returns a list containing both the palette function
+  # and the domain (min/max values) it was created with.
+  create_raster_palette_and_domain <- function(ras, palette_name, use_quantiles = FALSE) {
+    req(ras, palette_name)
+
+    # Handle case where raster might be empty or have no values
+    if (all(is.na(values(ras)))) {
+      return(list(pal = colorNumeric("transparent", domain = c(0, 1)), domain = c(0, 1))) # Return a transparent palette
+    }
+
+    if (use_quantiles) {
+      # Use 1st and 99th quantiles for the domain to handle outliers
+      q_vals <- quantile(values(ras), probs = c(0.01, 0.99), na.rm = TRUE)
+      min_val <- q_vals[1]
+      max_val <- q_vals[2]
+    } else {
+      # Use absolute min and max values for the domain to cover all values
+      min_val <- cellStats(ras, 'min', na.rm = TRUE)
+      max_val <- cellStats(ras, 'max', na.rm = TRUE)
+    }
+
+    # Handle the case where min_val and max_val are the same (e.g., raster with a single constant value)
+    if (min_val == max_val) {
+      min_val <- min_val - 0.01
+      max_val <- max_val + 0.01
+    }
+
+    # Ensure domain is valid (e.g., not NaN from all NAs after quantile/cellStats)
+    if (is.na(min_val) || is.na(max_val) || !is.finite(min_val) || !is.finite(max_val)) {
+      min_val <- 0 # Fallback to a default reasonable range
+      max_val <- 1
+      warning("Calculated raster domain is invalid (NA/Inf), defaulting to 0-1 for palette.")
+    }
+
+    if (palette_name %in% c("viridis", "magma", "inferno", "plasma", "cividis", "rocket", "mako", "turbo")) {
+      pal_func <- get(palette_name)
+      color_pal <- colorNumeric(
+        palette = pal_func(256),
+        domain = c(min_val, max_val),
+        na.color = "transparent"
+      )
+    } else {
+      color_pal <- colorNumeric(
+        palette = palette_name,
+        domain = c(min_val, max_val),
+        na.color = "transparent"
+      )
+    }
+    return(list(pal = color_pal, domain = c(min_val, max_val)))
+  }
+
+  # Reactive for Predictions Raster Color Palette and its Domain
+  predictions_palette_info <- reactive({
+    ras <- predictions_raster()
+    if (!is.null(ras)) {
+      # For predictions, often quantiles are preferred for visual range
+      create_raster_palette_and_domain(ras, input$predictions_palette, use_quantiles = TRUE)
+    } else {
+      list(pal = NULL, domain = c(0, 1)) # Default empty
+    }
+  })
+
+  # Reactive for Uncertainty Raster Color Palette and its Domain
+  uncertainty_palette_info <- reactive({
+    ras <- uncertainty_raster()
+    if (!is.null(ras)) {
+      # For uncertainty, often quantiles are preferred for visual range
+      create_raster_palette_and_domain(ras, input$uncertainty_palette, use_quantiles = TRUE)
+    } else {
+      list(pal = NULL, domain = c(0, 1)) # Default empty
+    }
+  })
+
+  # Reactive for Extrapolation Raster Color Palette and its Domain
+  extrapolation_palette_info <- reactive({
+    ras <- extrapolation_raster()
+    if (!is.null(ras)) {
+      # For extrapolation (often binary or categorical), full range is usually better
+      create_raster_palette_and_domain(ras, input$extrapolation_palette, use_quantiles = FALSE)
+    } else {
+      list(pal = NULL, domain = c(0, 1)) # Default empty
+    }
+  })
+
+  # Reactive for Bivariate Predictions Uncertainty Raster Color Palette and its Domain
+  bivariate_predictions_uncertainty_palette_info <- reactive({
+    ras <- bivariate_predictions_uncertainty_raster()
+    if (!is.null(ras)) {
+      # For bivariate, if we *were* to generate a palette, we might want specific colors
+      # Here, we'll just return a placeholder, as the legend is a PNG.
+      create_raster_palette_and_domain(ras, "PRGn", use_quantiles = FALSE)
+    } else {
+      list(pal = NULL, domain = c(0, 1)) # Default empty
+    }
+  })
+
+  # Reactive for Detected Density Raster Color Palette and its Domain (NEW)
+  detected_density_palette_info <- reactive({
+    ras <- detected_density_raster()
+    if (!is.null(ras)) {
+      create_raster_palette_and_domain(ras, input$detected_density_palette, use_quantiles = TRUE)
+    } else {
+      list(pal = NULL, domain = c(0, 1)) # Default empty
+    }
+  })
+
+
+  # --- Dynamic UI for EACH raster's options (unchanged, as they refer to input$xxx) ---
+  output$predictions_options_ui <- renderUI({
+    ras <- predictions_raster()
+    if (!is.null(ras)) {
+      tagList(
+        selectInput("predictions_palette", "Predictions Color Palette:",
+                    choices = c("Viridis (Sequential)" = "viridis",
+                                "Magma (Sequential)" = "magma",
+                                "Inferno (Sequential)" = "inferno",
+                                "Plasma (Sequential)" = "plasma",
+                                "Cividis (Sequential)" = "cividis",
+                                "Rocket (Sequential)" = "rocket",
+                                "Mako (Sequential)" = "mako",
+                                "Turbo (Sequential)" = "turbo",
+                                "Reds (Sequential)" = "Reds",
+                                "Blues (Sequential)" = "Blues",
+                                "Greens (Sequential)" = "Greens",
+                                "Oranges (Sequential)" = "Oranges",
+                                "Purples (Sequential)" = "Purples",
+                                "Spectral (Diverging)" = "Spectral",
+                                "RdYlGn (Diverging)" = "RdYlGn",
+                                "BrBG (Diverging)" = "BrBG"),
+                    selected = "viridis"),
+        sliderInput("predictions_opacity", "Predictions Opacity:", min = 0, max = 1, value = 0.7, step = 0.05)
+      )
+    } else {
+      NULL
+    }
+  })
+
+  output$uncertainty_options_ui <- renderUI({
+    ras <- uncertainty_raster()
+    if (!is.null(ras)) {
+      tagList(
+        selectInput("uncertainty_palette", "Uncertainty Color Palette:",
+                    choices = c("Viridis (Sequential)" = "viridis",
+                                "Magma (Sequential)" = "magma",
+                                "Inferno (Sequential)" = "inferno",
+                                "Plasma (Sequential)" = "plasma",
+                                "Cividis (Sequential)" = "cividis",
+                                "Rocket (Sequential)" = "rocket",
+                                "Mako (Sequential)" = "mako",
+                                "Turbo (Sequential)" = "turbo",
+                                "Reds (Sequential)" = "Reds",
+                                "Blues (Sequential)" = "Blues",
+                                "Greens (Sequential)" = "Greens",
+                                "Oranges (Sequential)" = "Oranges",
+                                "Purples (Sequential)" = "Purples",
+                                "Spectral (Diverging)" = "Spectral",
+                                "RdYlGn (Diverging)" = "RdYlGn",
+                                "BrBG (Diverging)" = "BrBG"),
+                    selected = "viridis"),
+        sliderInput("uncertainty_opacity", "Uncertainty Opacity:", min = 0, max = 1, value = 0.7, step = 0.05)
+      )
+    } else {
+      NULL
+    }
+  })
+
+  output$extrapolation_options_ui <- renderUI({
+    ras <- extrapolation_raster()
+    if (!is.null(ras)) {
+      tagList(
+        selectInput("extrapolation_palette", "Extrapolation Color Palette:",
+                    choices = c("Viridis (Sequential)" = "viridis",
+                                "Magma (Sequential)" = "magma",
+                                "Inferno (Sequential)" = "inferno",
+                                "Plasma (Sequential)" = "plasma",
+                                "Cividis (Sequential)" = "cividis",
+                                "Rocket (Sequential)" = "rocket",
+                                "Mako (Sequential)" = "mako",
+                                "Turbo (Sequential)" = "turbo",
+                                "Reds (Sequential)" = "Reds",
+                                "Blues (Sequential)" = "Blues",
+                                "Greens (Sequential)" = "Greens",
+                                "Oranges (Sequential)" = "Oranges",
+                                "Purples (Sequential)" = "Purples",
+                                "Spectral (Diverging)" = "Spectral",
+                                "RdYlGn (Diverging)" = "RdYlGn",
+                                "BrBG (Diverging)" = "BrBG"),
+                    selected = "viridis"),
+        sliderInput("extrapolation_opacity", "Extrapolation Opacity:", min = 0, max = 1, value = 0.7, step = 0.05)
+      )
+    } else {
+      NULL
+    }
+  })
+
+  # Dynamic UI for Bivariate Predictions Uncertainty raster options
+  output$bivariate_predictions_uncertainty_options_ui <- renderUI({
+    ras <- bivariate_predictions_uncertainty_raster()
+    if (!is.null(ras)) {
+      tagList(
+        # We don't need a palette selector here since we're using a PNG legend
+        sliderInput("bivariate_predictions_uncertainty_opacity", "Bivariate Opacity:", min = 0, max = 1, value = 0.7, step = 0.05)
+      )
+    } else {
+      NULL
+    }
+  })
+
+  # Dynamic UI for Detected Density raster options (NEW)
+  output$detected_density_options_ui <- renderUI({
+    ras <- detected_density_raster()
+    if (!is.null(ras)) {
+      tagList(
+        selectInput("detected_density_palette", "Detected Density Color Palette:",
+                    choices = c("YlOrRd (Sequential)" = "YlOrRd",
+                                "Greens (Sequential)" = "Greens",
+                                "Blues (Sequential)" = "Blues",
+                                "Viridis (Sequential)" = "viridis",
+                                "Magma (Sequential)" = "magma",
+                                "Inferno (Sequential)" = "inferno",
+                                "Plasma (Sequential)" = "plasma",
+                                "Cividis (Sequential)" = "cividis",
+                                "Rocket (Sequential)" = "rocket",
+                                "Mako (Sequential)" = "mako",
+                                "Turbo (Sequential)" = "turbo",
+                                "Reds (Sequential)" = "Reds",
+                                "Oranges (Sequential)" = "Oranges",
+                                "Purples (Sequential)" = "Purples"), # Added more choices
+                    selected = "YlOrRd"),
+        sliderInput("detected_density_opacity", "Detected Density Opacity:", min = 0, max = 1, value = 0.7, step = 0.05)
+      )
+    } else {
+      NULL
+    }
+  })
+
+
+  # Reactive to store the path to the uploaded bivariate legend image
+  bivariate_legend_filepath <- reactiveVal(NULL)
+
+  observeEvent(input$bivariate_legend_upload, {
+    req(input$bivariate_legend_upload)
+    bivariate_legend_filepath(input$bivariate_legend_upload$datapath)
+  })
+
+  # Optional: Render a preview of the uploaded legend image
+  output$bivariate_legend_preview_ui <- renderUI({
+    if (!is.null(bivariate_legend_filepath())) {
+      # Use `renderImage` to handle the serving of the temporary file
+      # This is generally better than base64 encoding for potentially larger images
+      tags$div(
+        tags$p("Uploaded Legend Preview:"),
+        img(src = bivariate_legend_filepath(), style = "max-width: 150px; height: auto; border: 1px solid #ddd;")
+      )
+    }
+  })
+
+  # Reactive for Uploaded Detected Shapefile Point Data
+  uploaded_points_data <- reactive({
+    # Require .shp and .dbf files, and optionally .shx and .prj
+    req(input$point_shapefile_upload)
+
+    # Get the datapath of the .shp file
+    # Ensure all parts of the shapefile are present and extract the shp file
+    shp_file_info <- input$point_shapefile_upload[grep(".shp$", input$point_shapefile_upload$name), ]
+    dbf_file_info <- input$point_shapefile_upload[grep(".dbf$", input$point_shapefile_upload$name), ]
+    shx_file_info <- input$point_shapefile_upload[grep(".shx$", input$point_shapefile_upload$name), ]
+    prj_file_info <- input$point_shapefile_upload[grep(".prj$", input$point_shapefile_upload$name), ] # Optional but good to have
+
+    if (nrow(shp_file_info) == 0 || nrow(dbf_file_info) == 0) {
+      showNotification("A shapefile requires at least .shp and .dbf components.", type = "error", duration = 5)
+      return(NULL)
+    }
+
+    # Create a temporary directory to store the shapefile components
+    temp_dir <- tempdir()
+    file.copy(input$point_shapefile_upload$datapath,
+              file.path(temp_dir, input$point_shapefile_upload$name),
+              overwrite = TRUE)
+
+    # Path to the .shp file within the temporary directory
+    shp_path_in_temp <- file.path(temp_dir, shp_file_info$name)
+
+    withProgress(message = paste("Loading Shapefile Point Data:"), value = 0, {
+      incProgress(0.1, detail = "Reading shapefile...")
+      points_sf <- NULL
+      tryCatch({
+        points_sf <- st_read(shp_path_in_temp, quiet = TRUE)
+        incProgress(0.3, detail = "Checking geometry type...")
+
+        # Ensure it's point data
+        if (!any(st_geometry_type(points_sf) %in% c("POINT", "MULTIPOINT"))) {
+          showNotification("Uploaded shapefile does not contain point geometries. Please upload a point shapefile.", type = "error", duration = 10)
+          return(NULL)
+        }
+
+        incProgress(0.3, detail = "Checking projection and reprojecting if necessary...")
+        # Reproject to WGS84 if not already
+        if (st_crs(points_sf)$epsg != 4326) {
+          message("Reprojecting uploaded shapefile to WGS84 (EPSG:4326)...")
+          points_sf <- st_transform(points_sf, 4326)
+        }
+
+        incProgress(0.2, detail = "Done.")
+        return(points_sf)
+      }, error = function(e) {
+        showNotification(paste("Error loading or processing shapefile:", e$message), type = "error", duration = 10)
+        return(NULL)
+      })
+    })
+  })
+
+  # Reactive for Undetected Shapefile Point Data
+  undetected_points_data <- reactive({
+    req(input$undetected_point_shapefile_upload)
+
+    shp_file_info <- input$undetected_point_shapefile_upload[grep(".shp$", input$undetected_point_shapefile_upload$name), ]
+    dbf_file_info <- input$undetected_point_shapefile_upload[grep(".dbf$", input$undetected_point_shapefile_upload$name), ]
+    shx_file_info <- input$undetected_point_shapefile_upload[grep(".shx$", input$undetected_point_shapefile_upload$name), ]
+    prj_file_info <- input$undetected_point_shapefile_upload[grep(".prj$", input$undetected_point_shapefile_upload$name), ]
+
+    if (nrow(shp_file_info) == 0 || nrow(dbf_file_info) == 0) {
+      showNotification("A shapefile requires at least .shp and .dbf components for Undetected Points.", type = "error", duration = 5)
+      return(NULL)
+    }
+
+    temp_dir <- tempdir()
+    file.copy(input$undetected_point_shapefile_upload$datapath,
+              file.path(temp_dir, input$undetected_point_shapefile_upload$name),
+              overwrite = TRUE)
+
+    shp_path_in_temp <- file.path(temp_dir, shp_file_info$name)
+
+    withProgress(message = paste("Loading Shapefile Undetected Point Data:"), value = 0, {
+      incProgress(0.1, detail = "Reading shapefile...")
+      points_sf <- NULL
+      tryCatch({
+        points_sf <- st_read(shp_path_in_temp, quiet = TRUE)
+        incProgress(0.3, detail = "Checking geometry type...")
+
+        if (!any(st_geometry_type(points_sf) %in% c("POINT", "MULTIPOINT"))) {
+          showNotification("Uploaded shapefile for Undetected Points does not contain point geometries. Please upload a point shapefile.", type = "error", duration = 10)
+          return(NULL)
+        }
+
+        incProgress(0.3, detail = "Checking projection and reprojecting if necessary...")
+        if (st_crs(points_sf)$epsg != 4326) {
+          message("Reprojecting uploaded undetected shapefile to WGS84 (EPSG:4326)...")
+          points_sf <- st_transform(points_sf, 4326)
+        }
+
+        incProgress(0.2, detail = "Done.")
+        return(points_sf)
+      }, error = function(e) {
+        showNotification(paste("Error loading or processing Undetected shapefile:", e$message), type = "error", duration = 10)
+        return(NULL)
+      })
+    })
+  })
+
+
+  # Render the Leaflet map (initial setup)
+  output$country_map <- renderLeaflet({
+    m <- leaflet() %>%
+      addProviderTiles(providers$Esri.WorldTopoMap,
+                       options = providerTileOptions(noWrap = TRUE),
+                       group = "Base Map") %>%
+      setView(lng = 0, lat = 0, zoom = 2) %>%
+      htmlwidgets::onRender(
+        "function(el, x) {
+          var map = this;
+          var $map_coords = $('#map_coords'); // Cache the jQuery object for efficiency
+
+          // Mousemove for coordinates
+          map.on('mousemove', function(e) {
+            var lat = e.latlng.lat.toFixed(4);
+            var lng = e.latlng.lng.toFixed(4);
+            var coords = 'Lat: ' + lat + ', Lng: ' + lng;
+            $map_coords.html(coords);
+          });
+        }"
+      ) %>%
+      addControl(
+        html = '<div id="map_coords" style="background-color: white; padding: 5px; border-radius: 5px; opacity: 0.8;"></div>',
+        position = "bottomleft"
+      ) %>%
+      addLayersControl(
+        baseGroups = "Base Map",
+        overlayGroups = c(
+          "Selected Country",
+          "Selected Ecoregions",
+          "Custom Bounding Boxes",
+          "Raster Boundaries",
+          "Detected Points",
+          "Undetected Points",
+          "Detected Density" # NEW: Add this to the initial layers control
+        ),
+        options = layersControlOptions(collapsed = FALSE)
+      )
+  })
+
+  # Observe changes in the selected country (redraws country, updates ecoregion dropdown)
+  observeEvent(input$selected_country, {
+    map_data <- filtered_country_data()
+
+    leafletProxy("country_map") %>%
+      clearGroup("Selected Country") %>%
+      clearGroup("Selected Ecoregions") # Clear the plural group
+
+    if (input$selected_country != "World (Global View)") {
+      if (nrow(map_data) > 0) {
+        bbox <- st_bbox(map_data)
+
+        leafletProxy("country_map") %>%
+          addPolygons(
+            data = map_data,
+            fillColor = "blue",
+            color = "black",
+            weight = 1,
+            fillOpacity = 0.6,
+            highlightOptions = highlightOptions(
+              color = "white",
+              weight = 2,
+              bringToFront = TRUE
+            ),
+            group = "Selected Country"
+          ) %>%
+          fitBounds(
+            lng1 = bbox["xmin"], lat1 = bbox["ymin"],
+            lng2 = bbox["xmax"], lat2 = bbox["ymax"]
+          )
+      }
+    } else {
+      leafletProxy("country_map") %>%
+        setView(lng = 0, lat = 0, zoom = 2)
+    }
+  })
+
+  # Observe changes in the selected Ecoregion dropdown (draws/clears Ecoregions)
+  observeEvent(input$selected_ecoregions, { # Changed trigger to plural input ID
+    ecoregions_data <- selected_ecoregions_to_display() # Use the plural reactive
+
+    leafletProxy("country_map") %>%
+      clearGroup("Selected Ecoregions") # Clear the plural group
+
+    if (!is.null(ecoregions_data) && nrow(ecoregions_data) > 0) {
+      bbox <- st_bbox(ecoregions_data)
+
+      leafletProxy("country_map") %>%
+        addPolygons(
+          data = ecoregions_data,
+          fillColor = "green",
+          color = "darkgreen",
+          weight = 2,
+          fillOpacity = 0.5,
+          group = "Selected Ecoregions", # Use the plural group
+          popup = ~paste0("Ecoregion: ", ECO_NAME, "<br>",
+                          "Realm: ", REALM, "<br>",
+                          "Biome: ", BIOME_NAME)
+        ) %>%
+        fitBounds(
+          lng1 = bbox["xmin"], lat1 = bbox["ymin"],
+          lng2 = bbox["xmax"], lat2 = bbox["ymax"]
+        )
+    }
+  })
+
+  # Observe the "Add Bounding Box Polygon" button click
+  observeEvent(input$add_bbox_polygon, {
+    req(input$xmin, input$xmax, input$ymin, input$ymax)
+
+    if (input$xmin >= input$xmax || input$ymin >= input$ymax) {
+      showNotification("X Max must be greater than X Min, and Y Max must be greater than Y Min.",
+                       type = "error", duration = 5)
+      return()
+    }
+
+    bbox_coords <- matrix(c(
+      input$xmin, input$ymin,
+      input$xmax, input$ymin,
+      input$xmax, input$ymax,
+      input$xmin, input$ymax,
+      input$xmin, input$ymin
+    ), ncol = 2, byrow = TRUE)
+
+    bbox_polygon <- st_sf(
+      geometry = st_sfc(st_polygon(list(bbox_coords)), crs = 4326)
+    )
+
+    leafletProxy("country_map") %>%
+      addPolygons(
+        data = bbox_polygon,
+        fillColor = "red",
+        color = "darkred",
+        weight = 2,
+        fillOpacity = 0.4,
+        group = "Custom Bounding Boxes"
+      ) %>%
+      fitBounds(
+        lng1 = input$xmin, lat1 = input$ymin,
+        lng2 = input$xmax, lat2 = input$ymax
+      )
+  })
+
+  # Observe for Raster Boundary Data and add to map
+  observeEvent(raster_boundary_data(), {
+    boundary_sf <- raster_boundary_data()
+    req(boundary_sf)
+
+    leafletProxy("country_map") %>%
+      addPolygons(
+        data = boundary_sf,
+        fillColor = "orange",
+        color = "darkorange",
+        weight = 2,
+        fillOpacity = 0.3,
+        group = "Raster Boundaries",
+        popup = "Uploaded Raster Boundary"
+      ) %>%
+      fitBounds(
+        lng1 = st_bbox(boundary_sf)["xmin"], lat1 = st_bbox(boundary_sf)["ymin"],
+        lng2 = st_bbox(boundary_sf)["xmax"], lat2 = st_bbox(boundary_sf)["ymax"]
+      )
+  })
+
+  # Observe for Uploaded Detected Shapefile Point Data and add to map
+  observeEvent(c(uploaded_points_data(), input$show_points), {
+    points_sf <- uploaded_points_data()
+    show_points <- input$show_points
+
+    leafletProxy("country_map") %>%
+      clearGroup("Detected Points") # Clear this specific group
+
+    if (!is.null(points_sf) && show_points) {
+      leafletProxy("country_map") %>%
+        addCircleMarkers(
+          data = points_sf,
+          radius = 3,
+          color = "purple",
+          fillColor = "purple",
+          fillOpacity = 0.8,
+          stroke = FALSE,
+          group = "Detected Points",
+          # Create a generic popup from all properties if available
+          popup = ~{
+            if (length(names(points_sf)) > 0) {
+              popup_html <- "<b>Attributes:</b><br>"
+              # Exclude the geometry column from the popup
+              for (col_name in names(points_sf)[!names(points_sf) %in% c(attr(points_sf, "sf_column"))]) {
+                popup_html <- paste0(popup_html, "<b>", col_name, ":</b> ", points_sf[[col_name]], "<br>")
+              }
+              popup_html
+            } else {
+              "Point data"
+            }
+          }
+        )
+    }
+  })
+
+  # Observe for Uploaded Undetected Shapefile Point Data and add to map
+  observeEvent(c(undetected_points_data(), input$show_undetected_points), {
+    points_sf <- undetected_points_data()
+    show_points <- input$show_undetected_points
+
+    leafletProxy("country_map") %>%
+      clearGroup("Undetected Points") # Clear this specific group
+
+    if (!is.null(points_sf) && show_points) {
+      leafletProxy("country_map") %>%
+        addCircleMarkers(
+          data = points_sf,
+          radius = 3,
+          color = "red", # Choose a different color for "Undetected"
+          fillColor = "red",
+          fillOpacity = 0.8,
+          stroke = FALSE,
+          group = "Undetected Points",
+          popup = ~{
+            if (length(names(points_sf)) > 0) {
+              popup_html <- "<b>Attributes:</b><br>"
+              for (col_name in names(points_sf)[!names(points_sf) %in% c(attr(points_sf, "sf_column"))]) {
+                popup_html <- paste0(popup_html, "<b>", col_name, ":</b> ", points_sf[[col_name]], "<br>")
+              }
+              popup_html
+            } else {
+              "Undetected Point data"
+            }
+          }
+        )
+    }
+  })
+
+
+  # --- Individual Raster Display Logic for Predictions ---
+  observeEvent(c(predictions_raster(), input$show_predictions, input$predictions_palette, input$predictions_opacity), {
+    ras <- predictions_raster()
+    show_raster <- input$show_predictions
+    pal_info <- predictions_palette_info() # Get the list containing pal and domain
+    pal <- pal_info$pal
+    domain <- pal_info$domain # Extract the domain for the legend
+    opacity <- input$predictions_opacity
+
+    if (is.null(opacity)) opacity <- 0.7
+
+    leafletProxy("country_map") %>%
+      clearGroup("Predictions") %>%
+      removeControl("uploaded_raster_legend_predictions") # Always remove legend
+
+    if (!is.null(ras) && show_raster && !is.null(pal)) {
+      leafletProxy("country_map") %>%
+        addRasterImage(
+          ras,
+          colors = pal, # Use the palette function
+          opacity = opacity,
+          project = FALSE, # Assuming rasters are already reprojected to 4326
+          group = "Predictions"
+        ) %>%
+        # Add legend with the same palette function and the *exact domain* it was created with
+        addLegend(
+          position = "bottomright",
+          pal = pal,
+          values = domain, # IMPORTANT: Use the domain calculated with the palette
+          title = "Prediction Value",
+          layerId = "uploaded_raster_legend_predictions"
+        )
+    }
+  })
+
+  # --- Individual Raster Display Logic for Uncertainty ---
+  observeEvent(c(uncertainty_raster(), input$show_uncertainty, input$uncertainty_palette, input$uncertainty_opacity), {
+    ras <- uncertainty_raster()
+    show_raster <- input$show_uncertainty
+    pal_info <- uncertainty_palette_info()
+    pal <- pal_info$pal
+    domain <- pal_info$domain
+    opacity <- input$uncertainty_opacity
+
+    if (is.null(opacity)) opacity <- 0.7
+
+    leafletProxy("country_map") %>%
+      clearGroup("Uncertainty") %>%
+      removeControl("uploaded_raster_legend_uncertainty")
+
+    if (!is.null(ras) && show_raster && !is.null(pal)) {
+      leafletProxy("country_map") %>%
+        addRasterImage(
+          ras,
+          colors = pal,
+          opacity = opacity,
+          project = FALSE, # Assuming rasters are already reprojected to 4326
+          group = "Uncertainty"
+        ) %>%
+        addLegend(
+          position = "bottomright",
+          pal = pal,
+          values = domain, # IMPORTANT: Use the domain calculated with the palette
+          title = "Uncertainty Value",
+          layerId = "uploaded_raster_legend_uncertainty"
+        )
+    }
+  })
+
+  # --- Individual Raster Display Logic for Extrapolation ---
+  observeEvent(c(extrapolation_raster(), input$show_extrapolation, input$extrapolation_palette, input$extrapolation_opacity), {
+    ras <- extrapolation_raster()
+    show_raster <- input$show_extrapolation
+    pal_info <- extrapolation_palette_info()
+    pal <- pal_info$pal
+    domain <- pal_info$domain
+    opacity <- input$extrapolation_opacity
+
+    if (is.null(opacity)) opacity <- 0.7
+
+    leafletProxy("country_map") %>%
+      clearGroup("Extrapolation") %>%
+      removeControl("uploaded_raster_legend_extrapolation")
+
+    if (!is.null(ras) && show_raster && !is.null(pal)) {
+      leafletProxy("country_map") %>%
+        addRasterImage(
+          ras,
+          colors = pal,
+          opacity = opacity,
+          project = FALSE, # Assuming rasters are already reprojected to 4326
+          group = "Extrapolation"
+        ) %>%
+        addLegend(
+          position = "bottomright",
+          pal = pal,
+          values = domain, # IMPORTANT: Use the domain calculated with the palette
+          title = "Extrapolation Value",
+          layerId = "uploaded_raster_legend_extrapolation"
+        )
+    }
+  })
+
+  # Individual Raster Display Logic for Bivariate Predictions Uncertainty
+  observeEvent(c(bivariate_predictions_uncertainty_raster(), input$show_bivariate_predictions_uncertainty, input$bivariate_predictions_uncertainty_opacity, bivariate_legend_filepath()), {
+    ras <- bivariate_predictions_uncertainty_raster()
+    show_raster <- input$show_bivariate_predictions_uncertainty
+    opacity <- input$bivariate_predictions_uncertainty_opacity
+    legend_path <- bivariate_legend_filepath()
+
+    if (is.null(opacity)) opacity <- 0.7
+
+    leafletProxy("country_map") %>%
+      clearGroup("Bivariate Predictions Uncertainty") %>%
+      removeControl("uploaded_raster_legend_bivariate") # Clear old legend
+
+    if (!is.null(ras) && show_raster) {
+      # For bivariate, if we *were* to generate a palette, we might want specific colors
+      # But since we're using a static image for the legend, we can use a dummy palette
+      # or a generic one just to satisfy the addRasterImage function if needed.
+      # For simplicity, let's use a dummy palette as `create_raster_palette_and_domain` provides one.
+      pal_info <- bivariate_predictions_uncertainty_palette_info()
+      pal <- pal_info$pal
+
+      leafletProxy("country_map") %>%
+        addRasterImage(
+          ras,
+          colors = pal, # Use the dummy palette or actual one if you process the raster into RGB
+          opacity = opacity,
+          project = FALSE,
+          group = "Bivariate Predictions Uncertainty"
+        )
+
+      # Add custom HTML legend for bivariate raster if a PNG is uploaded
+      if (!is.null(legend_path)) {
+        leafletProxy("country_map") %>%
+          addControl(
+            html = tags$img(src = legend_path,
+                            style = "width:150px; height:auto;"), # Adjust size as needed
+            position = "bottomright",
+            layerId = "uploaded_raster_legend_bivariate"
+          )
+      } else {
+        # If no custom legend is uploaded, you might want a placeholder or no legend
+        # For a bivariate map, a generated legend from `colorNumeric` is usually not appropriate.
+        showNotification("No bivariate legend image uploaded. Legend will not be displayed for Bivariate Predictions Uncertainty.", type = "info")
+      }
+    }
+  })
+
+  # Individual Raster Display Logic for Detected Density (NEW)
+  observeEvent(c(detected_density_raster(), input$show_detected_density, input$detected_density_palette, input$detected_density_opacity), {
+    ras <- detected_density_raster()
+    show_raster <- input$show_detected_density
+    pal_info <- detected_density_palette_info()
+    pal <- pal_info$pal
+    domain <- pal_info$domain
+    opacity <- input$detected_density_opacity
+
+    if (is.null(opacity)) opacity <- 0.7
+
+    leafletProxy("country_map") %>%
+      clearGroup("Detected Density") %>%
+      removeControl("uploaded_raster_legend_detected_density")
+
+    if (!is.null(ras) && show_raster && !is.null(pal)) {
+      leafletProxy("country_map") %>%
+        addRasterImage(
+          ras,
+          colors = pal,
+          opacity = opacity,
+          project = FALSE,
+          group = "Detected Density"
+        ) %>%
+        addLegend(
+          position = "bottomright",
+          pal = pal,
+          values = domain,
+          title = "Density Value",
+          layerId = "uploaded_raster_legend_detected_density"
+        )
+    }
+  })
+
+
+  # Update layer control to include new raster layers for toggling
+  observeEvent(c(predictions_raster(), uncertainty_raster(), extrapolation_raster(), bivariate_predictions_uncertainty_raster(), uploaded_points_data(), undetected_points_data(), detected_density_raster()), {
+    current_overlays <- c(
+      "Selected Country",
+      "Selected Ecoregions",
+      "Custom Bounding Boxes",
+      "Raster Boundaries"
+    )
+
+    if (!is.null(predictions_raster())) {
+      current_overlays <- c(current_overlays, "Predictions")
+    }
+    if (!is.null(uncertainty_raster())) {
+      current_overlays <- c(current_overlays, "Uncertainty")
+    }
+    if (!is.null(extrapolation_raster())) {
+      current_overlays <- c(current_overlays, "Extrapolation")
+    }
+    if (!is.null(bivariate_predictions_uncertainty_raster())) {
+      current_overlays <- c(current_overlays, "Bivariate Predictions Uncertainty")
+    }
+    if (!is.null(uploaded_points_data())) {
+      current_overlays <- c(current_overlays, "Detected Points")
+    }
+    if (!is.null(undetected_points_data())) {
+      current_overlays <- c(current_overlays, "Undetected Points")
+    }
+    if (!is.null(detected_density_raster())) { # NEW: Add this check
+      current_overlays <- c(current_overlays, "Detected Density")
+    }
+
+    leafletProxy("country_map") %>%
+      clearControls() %>% # Clear existing controls
+      addProviderTiles(providers$Esri.WorldTopoMap,
+                       options = providerTileOptions(noWrap = TRUE),
+                       group = "Base Map") %>%
+      addControl(
+        html = '<div id="map_coords" style="background-color: white; padding: 5px; border-radius: 5px; opacity: 0.8;"></div>',
+        position = "bottomleft"
+      ) %>%
+      addLayersControl(
+        baseGroups = "Base Map",
+        overlayGroups = current_overlays,
+        options = layersControlOptions(collapsed = FALSE)
+      )
+  }, ignoreNULL = FALSE) # Run initially and whenever rasters are uploaded/cleared
+}
+
+shinyApp(ui = ui, server = server)
+```

@@ -1,5 +1,5 @@
 ---
-title: "birds_names"
+title: "Species_names"
 format: html
 editor: visual
 ---
@@ -16,7 +16,7 @@ library(tidyr) # For distinct on multiple columns (though dplyr::distinct does i
 # --- Define the User Interface (UI) ---
 ui <- fluidPage(
   # Application title
-  titlePanel("Select species Name(s) within Class"),
+  titlePanel("Select Species Name(s) within Class"),
   
   br(),
  # tags$h4("Mammals List (Sample Data)"),
@@ -85,7 +85,7 @@ server <- function(input, output, session) {
 
     # Mammal Data (Sample Data)
     
-    mammals_data <- read.csv("./www/Mammals_Canada.csv", header=T)
+    mammals_data <- read.csv("./datasets_solutions/Mammals_Canada.csv", header=T)
 
     # Combine data frames
     bind_rows(birds_data, mammals_data)

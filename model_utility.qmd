@@ -5,6 +5,7 @@ editor: visual
 ---
 
 ```{r}
+
 # ui.R
 library(shiny)
 library(dplyr) # For data manipulation, especially if items/subitems get complex
@@ -17,7 +18,7 @@ library(dplyr) # For data manipulation, especially if items/subitems get complex
 # model_utility_df <- model_utility_df[order(model_utility_df$Category, decreasing = F),]
 
 # Simulated model_utility_df for demonstration if CSV is not available
-model_utility_df <- read.csv("C:/ODMAP-NOBMWG/www/model_utility.csv", header=T, sep=",")
+model_utility_df <- read.csv("./datasets_solutions/model_utility.csv", header=T, sep=",")
 model_utility_df <- model_utility_df[order(model_utility_df$Category, decreasing = F),]
 
 link_data <- data.frame(unlist(strsplit(model_utility_df$Author, ",")), unlist(strsplit(model_utility_df$References, ",")),stringsAsFactors = FALSE)
@@ -400,5 +401,3 @@ server <- function(input, output, session) {
 # Run the application
 shinyApp(ui = ui, server = server)
 ```
-
-
