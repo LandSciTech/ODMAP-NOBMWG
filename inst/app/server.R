@@ -11,6 +11,14 @@ server <- function(input, output, session) {
   odmap_dict = read.csv("www/odmap_dict.csv", header = T, stringsAsFactors = F)
   glossary = read.csv("www/glossary.csv", header = T, stringsAsFactors = F)
   rmm_dict = rmmDataDictionary()
+
+  model_utility_df <- read.csv(here::here("inst/app/www/datasets_solutions/model_utility.csv"), header=TRUE, sep=",")
+  model_utility_df <- model_utility_df[order(model_utility_df$Category, decreasing = FALSE),]
+  link_data <- data.frame(
+    Author = unlist(strsplit(model_utility_df$Author, ",")),
+    References = unlist(strsplit(model_utility_df$References, ",")),
+    stringsAsFactors = FALSE
+  )
   # ------------------------------------------------------------------------------------------#
   #                           Rendering functions for UI elements                             #
   # ------------------------------------------------------------------------------------------#
@@ -136,7 +144,7 @@ server <- function(input, output, session) {
 
   }
 
-  render_authors = function(){
+  render_author = function(){
 
     div(
       p("Main author/contact"),
@@ -203,12 +211,15 @@ server <- function(input, output, session) {
       )
     }
   }
+  render_model_utility = function(element_id, element_placeholder){
+    model_utility_mod_ui(element_id)
+  }
 
   render_model_algorithm = function(element_id, element_placeholder){
     selectizeInput(inputId = element_id, label = element_placeholder, choices = model_settings$suggestions, multiple = TRUE, options = list(create = T,  placeholder = "Choose from list or insert new values"))
   }
 
-  render_model_settings = function(){
+  render_model_setting = function(){
     div(
       em(p("Edit fields by double clicking in the table. Add new settings with the plus sign.", style = "font-weight: 300;")),
       tabsetPanel(id = "settings_tabset"),
@@ -232,7 +243,9 @@ server <- function(input, output, session) {
     if(info) {
       element <- fluidRow(
         column(10, element_ui),
-        column(1, div(actionButton(paste0("help_", element_id), label = "Definitions", icon = icon("goButton"), style="color: #fff; background-color: #bdbfbf; border-color: #2e6da4"),
+        column(1, div(actionButton(paste0("help_", element_id), label = "Definitions",
+                                   # goButton not found? icon = icon("goButton"),
+                                   style="color: #fff; background-color: #bdbfbf; border-color: #2e6da4"),
                       style = "position: absolute;top: 15px;"))
       )
     } else {
@@ -261,17 +274,12 @@ server <- function(input, output, session) {
         }
 
         # Second element: Input field(s)
-        element_UI_list[[2]] = switch(section_dict$element_type[i],
-                                      text = render_text(section_dict$element_id[i], section_dict$element_placeholder[i]),
-                                      text_details = render_text_details(section_dict$element_id[i], section_dict$element_placeholder[i], section_dict$details[i]),
-                                      author = render_authors(),
-                                      objective = render_objective(section_dict$element_id[i], section_dict$element_placeholder[i]),
-                                      applications = render_applicability(section_dict$element_id[i], section_dict$details[i]),
-                                      suggestion = render_suggestion(section_dict$element_id[i], section_dict$element_placeholder[i], section_dict$suggestions[i]),
-                                      extent = render_extent(section_dict$element_id[i]),
-                                      model_algorithm = render_model_algorithm(section_dict$element_id[i], section_dict$element_placeholder[i]),
-                                      model_setting = render_model_settings(),
-                                      model_assumptions = render_model_assumptions())
+        render_fun <- get_fun("render", section_dict$element_type[i])
+
+        render_args <- formals(render_fun)
+        render_args <- section_dict[i, names(render_args)] %>% as.list()
+
+        element_UI_list[[2]] = do.call(render_fun, render_args)
 
         element_UI_list[[2]] = render_element(section_dict$element_id[i], element_UI_list[[2]])
 
@@ -376,6 +384,12 @@ server <- function(input, output, session) {
     element_name = odmap_dict$element[which(odmap_dict$element_id == element_id)]
 
     knitr::kable(assumptions$df, caption = element_name)
+  }
+
+  knit_model_utility = function(element_id){
+    element_name = odmap_dict$element[which(odmap_dict$element_id == element_id)]
+    knitr::kable(model_utility_table(), caption = element_name)
+
   }
 
   knit_missing = function(element_id){
@@ -548,6 +562,11 @@ server <- function(input, output, session) {
     assump_tab %>% knitr::kable(format = "pipe") %>% paste0(collapse = "\n")
 
   }
+
+  export_model_utility = function(element_id){
+    util_tab = model_utility_table()
+    util_tab %>% knitr::kable(format = "pipe") %>% paste0(collapse = "\n")
+  }
   # ------------------------------------------------------------------------------------------#
   #                                   UI Elements                                             #
   # ------------------------------------------------------------------------------------------#
@@ -659,6 +678,7 @@ server <- function(input, output, session) {
                                            model_algorithm = export_suggestion(odmap_download$element_id[i]),
                                            model_setting = export_model_setting(odmap_download$element_id[i]),
                                            model_assumptions = export_model_assumptions(odmap_download$element_id[i]),
+                                           model_utility = export_model_utility(odmap_download$element_id[i]),
                                            "")
         }
 
@@ -993,6 +1013,10 @@ server <- function(input, output, session) {
     authors$df[input$authors_table_cell_edit$row, input$authors_table_cell_edit$col + 1] = input$authors_table_cell_edit$value
     output$authors_df = renderDataTable(authors$df)
   })
+
+  # Utility #------------
+
+  model_utility_table <- model_utility_mod_server("o_utility_1", model_utility_df, link_data)
 
   # -------------------------------------------
   # Import

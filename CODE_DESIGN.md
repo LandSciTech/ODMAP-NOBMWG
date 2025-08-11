@@ -28,6 +28,5 @@ When a new type of input is needed you must:
   1. Add the new element_type and export function call to the `switch` call in `output$protocol_download` 
      
      
-To run the local version of the app open the ui.R file and click Run App in 
-RStudio. Or run `shiny::runApp()` in the console.
+To run the local version of the app call run_metadata()
   

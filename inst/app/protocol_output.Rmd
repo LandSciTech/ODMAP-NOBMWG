@@ -44,6 +44,7 @@ for(i in 1:nrow(odmap_dict_rmd)){
          extent = knit_extent(odmap_dict_rmd$element_id[i]),
          model_algorithm = knit_suggestion(odmap_dict_rmd$element_id[i]),
          model_setting = knit_model_settings(odmap_dict_rmd$element_id[i]),
-         model_assumptions = knit_model_assumptions(odmap_dict_rmd$element_id[i]))
+         model_assumptions = knit_model_assumptions(odmap_dict_rmd$element_id[i]), 
+         model_utility = knit_model_utility(odmap_dict_rmd$element_id[i]))
 }
 ```

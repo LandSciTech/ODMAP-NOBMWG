@@ -2,6 +2,10 @@ library(shinytest2)
 library(shiny)
 appDir <-  system.file("app", package = "ODMAPNOBMWG")
 
+# app <- AppDriver$new(appDir)
+#
+# app$get_value()
+
 test_that("can modify and save", {
   testServer(app = appDir, {
     session$flushReact()
