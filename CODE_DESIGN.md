@@ -18,14 +18,14 @@ from "text" to "text_details".
 When a new type of input is needed you must:
 
   1. Add a new row in www/odmap_dict.csv with a new element_type and save the csv
-  1. Create a `render_<element_type>` function in server.R 
-  1. Add the new element_type and function call to the `switch` call in `render_section()` 
-  1. Add a corresponding `knit_<element_type>` function in server.R
-  1. Add the new element_type and knit function call to the `switch` call in 
+  1. Optional, create a module to contain ui and server code for the new element in element_type.R 
+  1. Create a `render_<element_type>` function in element_type.R 
+  1. Add a corresponding `knit_<element_type>` function in element_type.R 
+  1. **TODO remove the need for these switch calls** Add the new element_type and knit function call to the `switch` call in 
      protocol_output.Rmd and protocol_preview.Rmd
-  1. Add a corresponding `export_<element_type>` function in server.R unless
+  1. Add a corresponding `export_<element_type>` function in element_type.R unless
      `export_standard` is applicable 
-  1. Add the new element_type and export function call to the `switch` call in `output$protocol_download` 
+  1. **TODO remove the need for these switch calls** Add the new element_type and export function call to the `switch` call in `output$protocol_download` 
      
      
 To run the local version of the app call run_metadata()
