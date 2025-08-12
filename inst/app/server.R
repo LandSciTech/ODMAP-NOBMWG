@@ -8,7 +8,7 @@ library(tidyverse)
 library(rangeModelMetadata)
 
 server <- function(input, output, session) {
-  odmap_dict = read.csv("www/odmap_dict.csv", header = T, stringsAsFactors = F)
+  odmap_dict_in = read.csv("www/odmap_dict.csv", header = T, stringsAsFactors = F)
   glossary = read.csv("www/glossary.csv", header = T, stringsAsFactors = F)
   rmm_dict = rmmDataDictionary()
 
@@ -31,22 +31,17 @@ server <- function(input, output, session) {
                           "Complementary" = pull(odmap_dict %>% filter(field_relevance == 3), element_id)
   )
 
-
-
   # adding checkbox for fields
   output$category_checkboxes <- renderUI({
-
-    shiny::checkboxGroupInput(inputId = "selected_categories", label= NULL, choices = field_importance)
-
-
+    shiny::checkboxGroupInput(inputId = "hide_categories", label= NULL,
+                              choices = names(field_importance))
   })
 
-  filtered_items <- reactive({
+  odmap_dict <- reactive({
     # req(input$selected_categories) ensures that this reactive expression
     # only proceeds if at least one category is selected. If no categories
     # are selected, it will pause and not return an error.
     req(input$selected_categories)
-
 
     relevance_numbers <- c()
     if ("Essential" %in% input$selected_categories) {
@@ -59,20 +54,11 @@ server <- function(input, output, session) {
       relevance_numbers <- c(relevance_numbers, 3)
     }
 
-
-    odmap_dict %>%
+    odmap_dict_in %>%
       # Filter the data where the 'Category' column is present in the vector
       # of 'input$selected_categories' (the checkboxes the user has ticked).
       filter(field_relevance %in% relevance_numbers)
-
-
-
-
   })
-
-
-
-
 
 
   render_suggestion = function(element_id, element_placeholder, suggestions){
@@ -80,10 +66,6 @@ server <- function(input, output, session) {
 
     selectizeInput(inputId = element_id, label = element_placeholder, choices = suggestions, multiple = TRUE, options = list(create = T,  dropdownParent = 'body',  maxOptions = 100, persist=F, placeholder = "Choose from list or insert new values"))
   }
-
-
-
-
 
    render_text = function(element_id, element_placeholder){
     textAreaInput(inputId = element_id, label = element_placeholder, height = "45px", resize = "vertical")
