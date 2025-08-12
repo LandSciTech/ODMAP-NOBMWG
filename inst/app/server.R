@@ -12,15 +12,6 @@ server <- function(input, output, session) {
   glossary = read.csv("www/glossary.csv", header = T, stringsAsFactors = F)
   rmm_dict = rmmDataDictionary()
 
-  model_utility_df <- read.csv(here::here("inst/app/www/datasets_solutions/model_utility.csv"), header=TRUE, sep=",")
-  model_utility_df <- model_utility_df[order(model_utility_df$Category, decreasing = FALSE),]
-  link_data <- data.frame(
-    Author = unlist(strsplit(model_utility_df$Author, ",")),
-    References = unlist(strsplit(model_utility_df$References, ",")),
-    stringsAsFactors = FALSE
-  )
-
-
   #### adding a checkbox to select fields based on their relative importance
 
   field_importance = list("Essential" = pull(odmap_dict %>% filter(field_relevance == 1), element_id),
@@ -307,8 +298,10 @@ server <- function(input, output, session) {
   })
 
   # Module servers #------------
+  #TODO add a column in odmap_dict to flag whether an element has a specific
+  # server and automate the creation of these calls
 
-  model_utility_table <- model_utility_mod_server("o_utility_1", model_utility_df, link_data)
+  model_utility_table <- model_utility_server("o_utility_1")
 
   species_table <- species_names_server("o_taxon_2")
 
@@ -317,6 +310,12 @@ server <- function(input, output, session) {
   years_table <- years_server("o_scale_3")
 
   datatype_source_table <- datatype_source_server("o_bio_1")
+
+  figure_upload_server("o_workflow_2")
+
+  modelling_packages_table <- modelling_packages_server("o_software_1")
+
+  data_cleaning_table <- data_cleaning_server("d_bio_3")
 
   # ------------------------------------------------------------------------------------------#
   #                                   UI Elements                                             #

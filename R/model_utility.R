@@ -1,5 +1,5 @@
 # Module UI function
-model_utility_mod_ui <- function(id) {
+model_utility_ui <- function(id) {
   ns <- NS(id)
   tagList(
     h5("Please select the potential utility of your model.", style = "font-weight: bold"),
@@ -72,8 +72,17 @@ model_utility_mod_ui <- function(id) {
 }
 
 # Module server function
-model_utility_mod_server <- function(id, model_utility_df, link_data) {
+model_utility_server <- function(id) {
   moduleServer(id, function(input, output, session) {
+
+    model_utility_df <- read.csv(here::here("inst/app/www/datasets_solutions/model_utility.csv"), header=TRUE, sep=",")
+    model_utility_df <- model_utility_df[order(model_utility_df$Category, decreasing = FALSE),]
+    link_data <- data.frame(
+      Author = unlist(strsplit(model_utility_df$Author, ",")),
+      References = unlist(strsplit(model_utility_df$References, ",")),
+      stringsAsFactors = FALSE
+    )
+
     ns <- session$ns
 
     # Function to create category-items list
@@ -241,5 +250,5 @@ model_utility_mod_server <- function(id, model_utility_df, link_data) {
 }
 
 render_model_utility = function(element_id, element_placeholder){
-  model_utility_mod_ui(element_id)
+  model_utility_ui(element_id)
 }
