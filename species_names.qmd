@@ -85,7 +85,7 @@ server <- function(input, output, session) {
 
     # Mammal Data (Sample Data)
     
-    mammals_data <- read.csv("./datasets_solutions/Mammals_Canada.csv", header=T)
+    mammals_data <- read.csv(here::here("inst/app/www/datasets_solutions/Mammals_Canada.csv"), header=T)
 
     # Combine data frames
     bind_rows(birds_data, mammals_data)

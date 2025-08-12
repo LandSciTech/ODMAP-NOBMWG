@@ -60,14 +60,14 @@ model_utility_mod_ui <- function(id) {
     tableOutput(ns("selected_items_table")),
     # downloadButton(ns("download_data"), "Download List (CSV)"),
     hr(),
-    h6("Important Web Resources:", style = "font-weight: bold"),
-    hr(),
-    tags$div(
-      id = ns("scrollableLinksContainer"),
-      style = "height: 250px; overflow-y: scroll; border: 1px solid #ccc;
-                   padding: 15px; background-color: #f9f9f9; border-radius: 5px;",
-      uiOutput(ns("scrollableLinkList"))
-    )
+    # h6("Important Web Resources:", style = "font-weight: bold"),
+    # hr(),
+    # tags$div(
+    #   id = ns("scrollableLinksContainer"),
+    #   style = "height: 250px; overflow-y: scroll; border: 1px solid #ccc;
+    #                padding: 15px; background-color: #f9f9f9; border-radius: 5px;",
+    #   uiOutput(ns("scrollableLinkList"))
+    # )
   )
 }
 
@@ -217,25 +217,29 @@ model_utility_mod_server <- function(id, model_utility_df, link_data) {
     #   }
     # )
 
-    output$scrollableLinkList <- renderUI({
-      if (nrow(link_data) == 0) {
-        return(p("No links available to display."))
-      }
-      link_elements <- lapply(1:nrow(link_data), function(i) {
-        current_name <- link_data$Author[i]
-        current_url <- link_data$References[i]
-        tags$li(
-          tags$p(
-            tags$a(href = current_url, target = "_blank", current_name,
-                   style = "font-weight: bold; margin-right: 5px; text-decoration: none; color: #0056b3;")
-          )
-        )
-      })
-      tags$ul(
-        link_elements,
-        style = "list-style-type: none; padding-left: 0; margin-top: 0;"
-      )
-    })
+    # output$scrollableLinkList <- renderUI({
+    #   if (nrow(link_data) == 0) {
+    #     return(p("No links available to display."))
+    #   }
+    #   link_elements <- lapply(1:nrow(link_data), function(i) {
+    #     current_name <- link_data$Author[i]
+    #     current_url <- link_data$References[i]
+    #     tags$li(
+    #       tags$p(
+    #         tags$a(href = current_url, target = "_blank", current_name,
+    #                style = "font-weight: bold; margin-right: 5px; text-decoration: none; color: #0056b3;")
+    #       )
+    #     )
+    #   })
+    #   tags$ul(
+    #     link_elements,
+    #     style = "list-style-type: none; padding-left: 0; margin-top: 0;"
+    #   )
+    # })
     return(selected_items_list)
   })
+}
+
+render_model_utility = function(element_id, element_placeholder){
+  model_utility_mod_ui(element_id)
 }
