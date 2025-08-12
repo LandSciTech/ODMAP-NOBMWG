@@ -315,6 +315,9 @@ server <- function(input, output, session) {
   management_unit_table <- management_units_server("o_location_2")
 
   years_table <- years_server("o_scale_3")
+
+  datatype_source_table <- datatype_source_server("o_bio_1")
+
   # ------------------------------------------------------------------------------------------#
   #                                   UI Elements                                             #
   # ------------------------------------------------------------------------------------------#
