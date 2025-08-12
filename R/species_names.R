@@ -4,7 +4,7 @@
 species_names_ui <- function(id) {
   ns <- NS(id)
   tagList(
-    h5("Select Species Name(s) within Class"),
+    h5("Select Species Name(s) within Class", style = "font-weight: bold"),
     br(),
     selectInput(
       inputId = ns("selected_class"),
@@ -22,10 +22,10 @@ species_names_ui <- function(id) {
     actionButton(ns("save_selection_btn"), "Save Current Selection", class = "btn-primary"),
     br(), br(),
     actionButton(ns("clear_saved_btn"), "Clear All Saved Selections", class = "btn-danger"),
-    h6("Currently Selected Species (before saving):"),
+    p("Currently Selected Species (before saving):"),
     tableOutput(ns("output_current_selection")),
     hr(),
-    h3("All Saved Species Selections:"),
+    p("All Saved Species Selections:"),
     tableOutput(ns("output_saved_species")),
     hr(),
     "Sources:",

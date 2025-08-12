@@ -306,11 +306,13 @@ server <- function(input, output, session) {
     output$authors_df = renderDataTable(authors$df)
   })
 
-  # Utility #------------
+  # Module servers #------------
 
   model_utility_table <- model_utility_mod_server("o_utility_1", model_utility_df, link_data)
 
   species_table <- species_names_server("o_taxon_2")
+
+  management_unit_table <- management_units_server("o_location_2")
   # ------------------------------------------------------------------------------------------#
   #                                   UI Elements                                             #
   # ------------------------------------------------------------------------------------------#

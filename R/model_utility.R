@@ -56,7 +56,7 @@ model_utility_mod_ui <- function(id) {
       label = "5. Add to List",
       icon = icon("plus-circle")
     ),
-    h6("Summary of selected Items List", style = "font-weight: bold"),
+    p("Summary of selected Items List", style = "font-weight: bold"),
     tableOutput(ns("selected_items_table")),
     # downloadButton(ns("download_data"), "Download List (CSV)"),
     hr(),
