@@ -313,6 +313,8 @@ server <- function(input, output, session) {
   species_table <- species_names_server("o_taxon_2")
 
   management_unit_table <- management_units_server("o_location_2")
+
+  years_table <- years_server("o_scale_3")
   # ------------------------------------------------------------------------------------------#
   #                                   UI Elements                                             #
   # ------------------------------------------------------------------------------------------#

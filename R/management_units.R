@@ -1,8 +1,3 @@
-# management_units_module.R
-
-library(shiny)
-library(dplyr)
-library(sf)
 
 # Module UI
 management_units_ui <- function(id) {
@@ -137,6 +132,7 @@ management_units_server <- function(id) {
     output$report_table <- renderTable({
       accumulated_report_data()
     })
+    return(accumulated_report_data)
   })
 }
 

@@ -1,4 +1,3 @@
-# species_names_module.R
 
 # ----- UI Function -----
 species_names_ui <- function(id) {
