@@ -35,7 +35,7 @@ running_number,section,section_id,subsection,subsection_id,element,element_id,el
 1,Data,d,Data partitioning,d_part,Method used for validation,d_part_1,Selection of training data (for model fitting),suggestion,,"Non-spatial Partitioning: Jackknife (k=n), Non-spatial Partitioning: Random k-fold, Spatial Partitioning: Block (k=4), Spatial Partitioning: Checkerboard, Spatial Partitioning: Spatial Cross-Validation
 ",0,0,1,1,,,,,0,0
 2,Data,d,Data partitioning,d_part,Testing data set,d_part_2,"Do you used independent data to test your model? if so, provide a short description.",text,,,1,0,1,1,,,,,0,0
-1,Data,d,Predictor variables,d_pred,Predictor variables (Covariates),d_pred_1,Please select from the list all predictor variables (covariates) you used  in your model.  Plase add covariates.qmd to the Shiny app,text,,,0,1,1,1,data$environment,variableNames,base,1,0,1
+1,Data,d,Predictor variables,d_pred,Predictor variables (Covariates),d_pred_1,Please select from the list all predictor variables (covariates) you used  in your model.  Plase add covariates.qmd to the Shiny app,covariates,,,0,1,1,1,data$environment,variableNames,base,1,0,1
 2,Data,d,Predictor variables,d_pred,Predictor variables rationale,d_pred_2,Predictor variables rationale,text_details,"Explain why covariates were selected? And, why other covariates were not included in the model (if any)",,,,,,,,,,0,1
 1,Data,d,Transfer data,d_proj,Data sources,d_proj_1,"Details on data sources: e.g., URL/DOI, accession date, database version",text,,,0,0,0,1,data$transfer$environment1,sources,transferEnv1,1,0,0
 2,Data,d,Transfer data,d_proj,Spatial extent,d_proj_2,Spatial extent of transfer data,extent,,,0,1,1,1,data$transfer$environment1,"extentSet,extentSet",transferEnv1,0,0,0

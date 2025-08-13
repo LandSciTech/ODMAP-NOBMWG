@@ -317,6 +317,8 @@ server <- function(input, output, session) {
 
   data_cleaning_table <- data_cleaning_server("d_bio_3")
 
+  covariates_table <- covariates_server("d_pred_1")
+
   # ------------------------------------------------------------------------------------------#
   #                                   UI Elements                                             #
   # ------------------------------------------------------------------------------------------#
