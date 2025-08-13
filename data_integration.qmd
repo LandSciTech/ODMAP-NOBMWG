@@ -12,7 +12,7 @@ library(htmltools)
 library(purrr)
 
 # Create data frame
-df <- read.csv("./www/Data_integration.csv")
+df <- read.csv(here::here("www/Data_integration.csv"))
 
 # Define UI for application
 ui <- fluidPage(

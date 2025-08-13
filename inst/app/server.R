@@ -319,6 +319,8 @@ server <- function(input, output, session) {
 
   covariates_table <- covariates_server("d_pred_1")
 
+  data_integration_table <- data_integration_server("d_bio_4")
+
   # ------------------------------------------------------------------------------------------#
   #                                   UI Elements                                             #
   # ------------------------------------------------------------------------------------------#
