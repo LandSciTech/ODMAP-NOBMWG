@@ -1,6 +1,16 @@
 # ODMAP-NOBMWG
 Is a modified version of the ODMAP protocol that extends and modifies it for inclusion into a larger model evaluation tool. This is a work in progress and is subject to frequent changes. 
 
+## How to launch app
+
+```r
+remotes::install_github("LandSciTech/ODMAP-NOBMWG")
+
+library(ODMAPNOBMWG)
+run_metadata()
+
+```
+
 
 The original ODMAP readme follows:
 
