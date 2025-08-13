@@ -27,7 +27,7 @@ data_integration_server <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
-    initial_df <- read.csv(here::here("www/Data_integration.csv"))
+    initial_df <- read.csv(here::here("inst/app/www/datasets_solutions/Data_integration.csv"))
 
     current_data <- reactiveVal(initial_df)
 

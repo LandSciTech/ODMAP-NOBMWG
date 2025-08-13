@@ -321,6 +321,8 @@ server <- function(input, output, session) {
 
   data_integration_table <- data_integration_server("d_bio_4")
 
+  assumptions_table <- assumptions_server("o_assumptions_1")
+
   # ------------------------------------------------------------------------------------------#
   #                                   UI Elements                                             #
   # ------------------------------------------------------------------------------------------#
