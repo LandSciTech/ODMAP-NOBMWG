@@ -36,25 +36,25 @@ ui <-  tagList(
                  It integrates multiple modules, providing functionality for modelers, evaluators and multiple users.",
                  h3("Model development module"),
                  p("Modelers will be able to upload model materials (inputs, outputs and metadata) to the MET. It can be used either during model design and implementation to help modelers to inform their decisions or after models have been implemented. To do this, we customized the ",
-                         a(href = ' https://odmap.wsl.ch/', "ODMAP", target = "_blank", .noWS = "outside"),
-                         " Shiny app from (",
-                         a(href = 'https://doi.org/10.1111/ecog.04960', "Zurell et al. 2020", target = "_blank", .noWS = "outside"),
-                         "),", style= "font-size: 18px;"),
+                   a(href = ' https://odmap.wsl.ch/', "ODMAP", target = "_blank", .noWS = "outside"),
+                   " Shiny app from (",
+                   a(href = 'https://doi.org/10.1111/ecog.04960', "Zurell et al. 2020", target = "_blank", .noWS = "outside"),
+                   "),", style= "font-size: 18px;"),
                  h3("Model evaluation module"),
                  p("Evaluators will be able to navegate, inquire and provide feedback on model materials. To do this, we developed a new protocol merging the metadata and model materials uploaded by modelers and a set of questions for evaluators to conduct a thorough evaluation of the model.", style= "font-size: 18px;"),
                  style= "font-size: 18px;"),
-                h3("Model reporting module"),
+               h3("Model reporting module"),
 
-                 p("This module will allow to generate both a summary of the model created by the modeler and a summary of the model evaluation created by the evaluator", style= "font-size: 18px;"),
+               p("This module will allow to generate both a summary of the model created by the modeler and a summary of the model evaluation created by the evaluator", style= "font-size: 18px;"),
 
-                 p("This module will also allow multiple users will be able to extract and summarize relevant information from the predictions and uncertainty outputs to fulfill multiple users needs.", style= "font-size: 18px;"),
+               p("This module will also allow multiple users will be able to extract and summarize relevant information from the predictions and uncertainty outputs to fulfill multiple users needs.", style= "font-size: 18px;"),
 
-        h3("Model synthesis module"),
+               h3("Model synthesis module"),
 
-        p("This module will integrate feedback and synthesize evaluations from multiple evaluators to inform relevant actions for model improvement.", style= "font-size: 18px;"),
+               p("This module will integrate feedback and synthesize evaluations from multiple evaluators to inform relevant actions for model improvement.", style= "font-size: 18px;"),
                img(src = "MET_Approach.jpg", width = "100%", style="display: block; margin-left: auto; margin-right: auto; min-width: 500px;"), br(),
 
-               )),
+        )),
       column(width = 2)
     )),
 
@@ -108,6 +108,14 @@ ui <-  tagList(
                  a(href = 'mailto:odmap@wsl.ch', 'odmap@wsl.ch', .noWS = "outside"), ".", style = "font-size: 18px;")
         )),
       column(width = 2)
+    )),
+
+    tabPanel("Spatial data", value = "spatial", fluidPage(
+      # spatial_upload_ui("spatial_upload") WIP
+    )),
+
+    tabPanel("Tables and figures", value = "tabs_figs", fluidPage(
+      # tab_fig_upload_ui("tab_fig_upload") WIP
     )),
 
     tabPanel("Create a protocol", value = "create", sidebarLayout(
