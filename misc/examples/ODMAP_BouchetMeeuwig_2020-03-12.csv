@@ -16,7 +16,7 @@ Overview,Biodiversity data,Observation type,field survey
 Overview,Biodiversity data,Response data type,presence-only
 Overview,Predictors,Predictor types,topographic; climatic
 Overview,Hypotheses,Hypotheses,"There is increasing evidence that complex seabed features influence the distribution of marine vertebrates. We used measures of seabed depth, curvature, slope, rugosity, and topographic complexity as predictor variables for fishes and sharks. We also tested sea surface temperature (and its variance)."
-Overview,Assumptions,Model assumptions,"•	 Relevant ecological drivers (or proxies) of species distributions are included.
+Overview,Assumptions,Model assumptions2,"•	 Relevant ecological drivers (or proxies) of species distributions are included.
 •	Detectability does not change across transects or habitat gradients.
 •	Species are at (pseudo-) equilibrium with their environment.
 •	Species show largely similar responses to the bait and the sampling instrument.
@@ -37,7 +37,7 @@ Data,Biodiversity data,Sampling design,"Sampling sites were chosen according to 
 Data,Biodiversity data,Sample size,The data contain 55 detections made over 51 camera transects.
 Data,Biodiversity data,Clipping,
 Data,Biodiversity data,Scaling,Sightings were spatially thinned (within 300 m).
-Data,Biodiversity data,Cleaning,Sightings were lumped across species. 
+Data,Biodiversity data,Cleaning,Sightings were lumped across species.
 Data,Biodiversity data,Absence data,
 Data,Biodiversity data,Background data,"We generated 1,000 random background points within the study area using a bias grid that reflected survey intensity throughout the region (expressed as the log of the cumulative length of transects traversed, in km)."
 Data,Biodiversity data,Errors and biases,"Sighting locations were identified with high precision from time-stamped GPS tracks. Misidentification rates were deemed low, as visibility was generally good and species identifications were checked by three independent image analysts."
@@ -82,7 +82,7 @@ Assessment,Performance statistics,Performance on validation data,
 Assessment,Performance statistics,Performance on test data,
 Assessment,Plausibility check,Response shapes,We used partial dependence plots to check the ecological plausibility of fitted relationships in MaxEnt models.
 Assessment,Plausibility check,Expert judgement,
-Prediction,Prediction output,Prediction unit,Predictions of relative probability of presence expressed on a continuous scale. 
+Prediction,Prediction output,Prediction unit,Predictions of relative probability of presence expressed on a continuous scale.
 Prediction,Prediction output,Post-processing,
 Prediction,Uncertainty quantification,Algorithmic uncertainty,"We compared model outputs to assess algorithmic uncertainty, and applied an ensemble approach averaging over two different model algorithms."
 Prediction,Uncertainty quantification,Input data uncertainty,
